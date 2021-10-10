@@ -41,8 +41,8 @@ jobs:
           elixir-version: ${{matrix.elixir}}
       - run: mix deps.get --only test
       - run: mix format --check-formatted
-      - run: mix deps.get && mix deps.unlock --check-unused
-      - run: mix deps.compile
+      - run: mix do deps.get, deps.unlock --check-unused, deps.compile
+      - run: mix do ecto.create, ecto.migrate
       - run: mix compile --warnings-as-errors
       - run: mix do compile --force, test
         env:

@@ -11,7 +11,7 @@ defmodule EventStore do
     {:ok, dispatched_event} =
       event
       |> event.__struct__.changeset()
-      |> then(&apply(@adapter, :insert, [&1]))
+      |> then(&@adapter.insert(&1))
 
     Logger.debug("Event #{dispatched_event.name} dispatched: #{inspect(dispatched_event)}")
 
@@ -25,7 +25,7 @@ defmodule EventStore do
   def stream(aggregate_id) do
     @adapter.stream(aggregate_id)
     |> Enum.map(fn event ->
-      module = Module.concat(@namespace, event.name)
+      module = Module.safe_concat(@namespace, event.name)
 
       module
       |> struct(%{aggregate_id: event.aggregate_id})

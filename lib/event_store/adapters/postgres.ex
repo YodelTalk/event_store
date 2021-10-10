@@ -2,9 +2,11 @@ defmodule EventStore.Adapters.Postgres do
   @behaviour EventStore.Adapter
 
   import Ecto.Query
-
   alias EventStore.Event
-  alias EventStore.Adapters.Postgres.Repo
+
+  defmodule Repo do
+    use Ecto.Repo, otp_app: :event_store, adapter: Ecto.Adapters.Postgres
+  end
 
   @impl true
   defdelegate insert(changeset), to: Repo

@@ -1,0 +1,15 @@
+import Config
+
+config :logger, level: :info
+
+config :event_store,
+  adapter: EventStore.Adapters.Postgres,
+  ecto_repos: [EventStore.Adapters.Postgres.Repo]
+
+config :event_store, EventStore.Adapters.Postgres.Repo,
+  username: System.get_env("POSTGRES_USER", "postgres"),
+  password: System.get_env("POSTGRES_PASSWORD", "postgres"),
+  database: "event_store_dev",
+  hostname: System.get_env("POSTGRES_HOST", "localhost"),
+  show_sensitive_data_on_connection_error: true,
+  pool_size: 10

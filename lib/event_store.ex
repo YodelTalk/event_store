@@ -2,8 +2,8 @@ defmodule EventStore do
   require Logger
   alias Phoenix.PubSub
 
-  @adapter Application.compile_env!(:event_store, :adapter)
-  @namespace Application.compile_env(:event_store, :namespace, __MODULE__)
+  @adapter Application.fetch_env!(:event_store, :adapter)
+  @namespace Application.get_env(:event_store, :namespace, __MODULE__)
 
   defdelegate exists?(aggregate_id, name), to: @adapter
 

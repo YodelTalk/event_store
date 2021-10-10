@@ -13,7 +13,8 @@ defmodule EventStoreTest do
     })
 
     assert_received %TestEvent{
-      aggregate_id: "01234567-89ab-cdef-0123-456789abcdef"
+      aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
+      data: @data
     }
   end
 
@@ -35,5 +36,14 @@ defmodule EventStoreTest do
     assert [first, second] = EventStore.stream(aggregate_id)
     assert %TestEvent{aggregate_id: ^aggregate_id} = first
     assert %TestEvent{aggregate_id: ^aggregate_id} = second
+  end
+
+  test "exists?/1 checks whether the given event with the specified aggregate_id exists" do
+    aggregate_id = Ecto.UUID.generate()
+
+    refute EventStore.exists?(aggregate_id, "TestEvent")
+
+    EventStore.dispatch(%TestEvent{aggregate_id: aggregate_id, data: @data})
+    assert EventStore.exists?(aggregate_id, "TestEvent")
   end
 end

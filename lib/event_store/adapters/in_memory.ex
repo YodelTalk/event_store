@@ -19,10 +19,6 @@ defmodule EventStore.Adapters.InMemory do
     {:ok, event}
   end
 
-  @namespace Application.get_env(:event_store, :namespace, EventStore)
-             |> Atom.to_string()
-             |> Kernel.<>(".")
-
   @impl true
   def stream(aggregate_id) when is_binary(aggregate_id) do
     Agent.get(__MODULE__, & &1)
@@ -31,11 +27,8 @@ defmodule EventStore.Adapters.InMemory do
   end
 
   @impl true
-  def stream(name) when is_atom(name) do
-    name =
-      name
-      |> Atom.to_string()
-      |> String.replace_prefix(@namespace, "")
+  def stream(event) when is_atom(event) do
+    name = EventStore.to_name(event)
 
     Agent.get(__MODULE__, & &1)
     |> Enum.filter(&(&1.name == name))
@@ -43,7 +36,16 @@ defmodule EventStore.Adapters.InMemory do
   end
 
   @impl true
-  def exists?(aggregate_id, name) do
+  @deprecated "Use exists?/2 with an atom as the second argument"
+  def exists?(aggregate_id, name) when is_binary(name) do
+    Agent.get(__MODULE__, & &1)
+    |> Enum.any?(&(&1.aggregate_id == aggregate_id and &1.name == name))
+  end
+
+  @impl true
+  def exists?(aggregate_id, event) when is_atom(event) do
+    name = EventStore.to_name(event)
+
     Agent.get(__MODULE__, & &1)
     |> Enum.any?(&(&1.aggregate_id == aggregate_id and &1.name == name))
   end

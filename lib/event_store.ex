@@ -22,8 +22,8 @@ defmodule EventStore do
     PubSub.subscribe(EventStore.PubSub, "events")
   end
 
-  def stream(aggregate_id) do
-    aggregate_id
+  def stream(aggregate_id_or_name) do
+    aggregate_id_or_name
     |> @adapter.stream()
     |> Enum.map(fn event ->
       module = Module.safe_concat(@namespace, event.name)
@@ -34,5 +34,11 @@ defmodule EventStore do
       |> Ecto.Changeset.apply_changes()
       |> tap(&Logger.debug("Event #{event.name} loaded: #{inspect(&1)}"))
     end)
+  end
+
+  def to_name(event) when is_atom(event) do
+    event
+    |> Atom.to_string()
+    |> String.replace_prefix(Atom.to_string(@namespace), "")
   end
 end

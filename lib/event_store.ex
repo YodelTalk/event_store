@@ -39,6 +39,6 @@ defmodule EventStore do
   def to_name(event) when is_atom(event) do
     event
     |> Atom.to_string()
-    |> String.replace_prefix(Atom.to_string(@namespace), "")
+    |> String.replace_prefix("#{@namespace}.", "")
   end
 end

@@ -19,10 +19,26 @@ defmodule EventStore.Adapters.InMemory do
     {:ok, event}
   end
 
+  @namespace Application.get_env(:event_store, :namespace, EventStore)
+             |> Atom.to_string()
+             |> Kernel.<>(".")
+
   @impl true
-  def stream(aggregate_id) do
+  def stream(aggregate_id) when is_binary(aggregate_id) do
     Agent.get(__MODULE__, & &1)
     |> Enum.filter(&(&1.aggregate_id == aggregate_id))
+    |> Enum.reverse()
+  end
+
+  @impl true
+  def stream(name) when is_atom(name) do
+    name =
+      name
+      |> Atom.to_string()
+      |> String.replace_prefix(@namespace, "")
+
+    Agent.get(__MODULE__, & &1)
+    |> Enum.filter(&(&1.name == name))
     |> Enum.reverse()
   end
 

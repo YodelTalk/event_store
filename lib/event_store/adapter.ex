@@ -3,6 +3,6 @@ defmodule EventStore.Adapter do
   @type name :: String.t()
 
   @callback insert(Ecto.Changeset.t()) :: {:ok, %EventStore.Event{}}
-  @callback stream(aggregate_id()) :: [%EventStore.Event{}]
+  @callback stream(aggregate_id() | atom()) :: [%EventStore.Event{}]
   @callback exists?(aggregate_id(), name()) :: boolean()
 end

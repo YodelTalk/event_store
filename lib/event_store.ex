@@ -23,7 +23,8 @@ defmodule EventStore do
   end
 
   def stream(aggregate_id) do
-    @adapter.stream(aggregate_id)
+    aggregate_id
+    |> @adapter.stream()
     |> Enum.map(fn event ->
       module = Module.safe_concat(@namespace, event.name)
 

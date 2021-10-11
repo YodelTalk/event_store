@@ -1,4 +1,4 @@
-defmodule EventStore.TestEvent do
+defmodule EventStore.UserCreated do
   use EventStore.Event
 
   @primary_key false

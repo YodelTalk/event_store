@@ -10,7 +10,7 @@ defmodule EventStore.Adapters.Postgres do
 
   @impl true
   def insert(changeset) do
-    event = Ecto.Changeset.apply_action!(changeset, :create)
+    event = Ecto.Changeset.apply_changes(changeset)
 
     {1, [%{id: id, aggregate_version: aggregate_version} | _]} =
       Repo.insert_all(

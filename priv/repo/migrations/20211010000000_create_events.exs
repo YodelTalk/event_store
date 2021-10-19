@@ -6,7 +6,7 @@ defmodule EventStore.Repo.Migrations.CreateEvents do
       add :name, :string, null: false
       add :version, :integer, null: false
       add :aggregate_id, :string, null: false
-      add :aggregate_version, :integer, null: false
+      add :aggregate_version, :bigint, null: false
       add :payload, :text
 
       timestamps updated_at: false, null: false

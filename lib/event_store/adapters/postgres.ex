@@ -17,6 +17,7 @@ defmodule EventStore.Adapters.Postgres do
         Event,
         [
           [
+            # TODO: Generate the keyword list from the changeset.
             name: event.name,
             version: event.version,
             aggregate_id: event.aggregate_id,

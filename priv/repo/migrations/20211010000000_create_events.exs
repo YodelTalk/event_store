@@ -3,12 +3,13 @@ defmodule EventStore.Repo.Migrations.CreateEvents do
 
   def change do
     create table(:events) do
-      add :name, :string
-      add :version, :integer
-      add :aggregate_id, :string
+      add :name, :string, null: false
+      add :version, :integer, null: false
+      add :aggregate_id, :string, null: false
+      add :aggregate_version, :bigint, null: false
       add :payload, :text
 
-      timestamps updated_at: false
+      timestamps updated_at: false, null: false
     end
   end
 end

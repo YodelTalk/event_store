@@ -4,18 +4,47 @@ defmodule EventStoreTest do
 
   @data %{"some" => "data"}
 
-  test "dispatch/1" do
-    EventStore.subscribe()
+  describe "dispatch/1" do
+    test "dispatches the stored event to all subscribers" do
+      EventStore.subscribe()
 
-    EventStore.dispatch(%UserCreated{
-      aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
-      data: @data
-    })
+      {:ok, event} =
+        EventStore.dispatch(%UserCreated{
+          aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
+          data: @data
+        })
 
-    assert_received %UserCreated{
-      aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
-      data: @data
-    }
+      refute is_nil(event.aggregate_version)
+
+      assert_received %UserCreated{
+        aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
+        data: @data
+      }
+    end
+
+    test "increments aggregate_version" do
+      EventStore.subscribe()
+
+      aggregate_id = Ecto.UUID.generate()
+
+      {:ok, %{aggregate_version: 1}} =
+        EventStore.dispatch(%UserCreated{
+          aggregate_id: aggregate_id,
+          data: @data
+        })
+
+      {:ok, %{aggregate_version: 1}} =
+        EventStore.dispatch(%UserCreated{
+          aggregate_id: Ecto.UUID.generate(),
+          data: @data
+        })
+
+      {:ok, %{aggregate_version: 2}} =
+        EventStore.dispatch(%UserCreated{
+          aggregate_id: aggregate_id,
+          data: @data
+        })
+    end
   end
 
   describe "stream/1" do

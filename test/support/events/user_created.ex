@@ -4,6 +4,7 @@ defmodule EventStore.UserCreated do
   @primary_key false
   embedded_schema do
     field :aggregate_id, :string
+    field :aggregate_version, :integer
     field :version, :integer, default: 1
     field :data, :map
   end
@@ -11,6 +12,7 @@ defmodule EventStore.UserCreated do
   def changeset(event) do
     attrs = %{
       aggregate_id: event.aggregate_id,
+      aggregate_version: event.aggregate_version,
       name: __MODULE__ |> Module.split() |> List.last(),
       payload: Jason.encode!(event.data)
     }

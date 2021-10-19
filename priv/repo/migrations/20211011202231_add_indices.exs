@@ -5,5 +5,6 @@ defmodule EventStore.Adapters.Postgres.Repo.Migrations.AddIndices do
     create index("events", [:name])
     create index("events", [:aggregate_id])
     create index("events", [:name, :aggregate_id])
+    create unique_index("events", [:aggregate_id, :aggregate_version])
   end
 end

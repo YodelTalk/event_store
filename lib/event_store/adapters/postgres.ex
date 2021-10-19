@@ -2,8 +2,6 @@ defmodule EventStore.Adapters.Postgres do
   @behaviour EventStore.Adapter
 
   import Ecto.Query
-  import Ecto.Changeset
-
   alias EventStore.Event
 
   defmodule Repo do
@@ -12,25 +10,32 @@ defmodule EventStore.Adapters.Postgres do
 
   @impl true
   def insert(changeset) do
-    changeset
-    |> assign_aggregate_version()
-    |> Repo.insert()
+    event = Ecto.Changeset.apply_action!(changeset, :create)
+
+    {1, [%{id: id, aggregate_version: aggregate_version} | _]} =
+      Repo.insert_all(
+        Event,
+        [
+          [
+            name: event.name,
+            version: event.version,
+            aggregate_id: event.aggregate_id,
+            aggregate_version: next_aggregate_version(event),
+            payload: event.payload,
+            inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+          ]
+        ],
+        returning: [:id, :aggregate_version]
+      )
+
+    {:ok, %{event | id: id, aggregate_version: aggregate_version}}
   end
 
-  defp assign_aggregate_version(changeset) do
-    query =
-      from e in "events",
-        where: e.aggregate_id == ^get_field(changeset, :aggregate_id),
-        select: max(e.aggregate_version)
-
-    next_aggregate_version =
-      case Repo.one(query) do
-        nil -> 0
-        current_version -> current_version + 1
-      end
-
-    changeset
-    |> force_change(:aggregate_version, next_aggregate_version)
+  defp next_aggregate_version(%{aggregate_id: aggregate_id} = _event) do
+    from(e in Event,
+      where: e.aggregate_id == ^aggregate_id,
+      select: %{aggregate_version: coalesce(max(e.aggregate_version) + 1, 1)}
+    )
   end
 
   @impl true

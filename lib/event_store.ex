@@ -7,15 +7,19 @@ defmodule EventStore do
 
   defdelegate exists?(aggregate_id, name), to: @adapter
 
+  @spec dispatch(%EventStore.Event{}) :: {:ok, %EventStore.Event{}}
   def dispatch(event) do
-    {:ok, dispatched_event} =
+    {:ok, %{aggregate_version: aggregate_version}} =
       event
       |> event.__struct__.changeset()
       |> then(&@adapter.insert(&1))
 
-    Logger.debug("Event #{dispatched_event.name} dispatched: #{inspect(dispatched_event)}")
+    event = %{event | aggregate_version: aggregate_version}
 
+    Logger.debug("Event dispatched: #{inspect(event)}")
     PubSub.broadcast(EventStore.PubSub, "events", event)
+
+    {:ok, event}
   end
 
   def subscribe() do

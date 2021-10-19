@@ -19,7 +19,7 @@ defmodule EventStore.Event do
     field :name, :string
     field :version, :integer, default: 1
     field :aggregate_id, :string
-    field :aggregate_version, :integer, default: 0
+    field :aggregate_version, :integer
     field :payload, :string
 
     timestamps updated_at: false

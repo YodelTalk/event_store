@@ -2,6 +2,8 @@ defmodule EventStore.Adapters.Postgres do
   @behaviour EventStore.Adapter
 
   import Ecto.Query
+  import Ecto.Changeset
+
   alias EventStore.Event
 
   defmodule Repo do
@@ -9,7 +11,27 @@ defmodule EventStore.Adapters.Postgres do
   end
 
   @impl true
-  defdelegate insert(changeset), to: Repo
+  def insert(changeset) do
+    changeset
+    |> assign_aggregate_version()
+    |> Repo.insert()
+  end
+
+  defp assign_aggregate_version(changeset) do
+    query =
+      from e in "events",
+        where: e.aggregate_id == ^get_field(changeset, :aggregate_id),
+        select: max(e.aggregate_version)
+
+    next_aggregate_version =
+      case Repo.one(query) do
+        nil -> 0
+        current_version -> current_version + 1
+      end
+
+    changeset
+    |> force_change(:aggregate_version, next_aggregate_version)
+  end
 
   @impl true
   def stream(aggregate_id) when is_binary(aggregate_id) do

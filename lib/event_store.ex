@@ -1,9 +1,12 @@
 defmodule EventStore do
   require Logger
+
   alias Phoenix.PubSub
+  alias EventStore.AcknowledgementError
 
   @adapter Application.fetch_env!(:event_store, :adapter)
   @namespace Application.get_env(:event_store, :namespace, __MODULE__)
+  @sync_timeout Application.get_env(:event_store, :sync_timeout, 5000)
 
   defdelegate exists?(aggregate_id, name), to: @adapter
 
@@ -14,12 +17,23 @@ defmodule EventStore do
       |> event.__struct__.changeset()
       |> then(&@adapter.insert(&1))
 
-    event = %{event | aggregate_version: aggregate_version}
+    event = %{event | aggregate_version: aggregate_version, from: self()}
 
     Logger.debug("Event dispatched: #{inspect(event)}")
     PubSub.broadcast(EventStore.PubSub, "events", event)
 
     {:ok, event}
+  end
+
+  @spec dispatch(%EventStore.Event{}) :: {:ok, %EventStore.Event{}}
+  def sync_dispatch(event) do
+    {:ok, %{aggregate_version: aggregate_version} = event} = dispatch(event)
+
+    receive do
+      ^aggregate_version -> {:ok, event}
+    after
+      @sync_timeout -> raise AcknowledgementError, event
+    end
   end
 
   def subscribe() do

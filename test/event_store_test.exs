@@ -53,7 +53,7 @@ defmodule EventStoreTest do
         EventStore.subscribe()
 
         receive do
-          event -> send(event.from, event.aggregate_version)
+          event -> EventStore.acknowledge(event)
         end
       end)
 

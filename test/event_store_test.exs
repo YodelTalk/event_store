@@ -5,7 +5,7 @@ defmodule EventStoreTest do
   @data %{"some" => "data"}
 
   describe "dispatch/1" do
-    test "dispatches the stored event to all subscribers" do
+    test "dispatches the event to all subscribers" do
       EventStore.subscribe()
 
       {:ok, event} =
@@ -44,6 +44,35 @@ defmodule EventStoreTest do
           aggregate_id: aggregate_id,
           data: @data
         })
+    end
+  end
+
+  describe "sync_dispatch/1" do
+    test "dispatches the event to all subscribers which must acknowledge the event" do
+      spawn(fn ->
+        EventStore.subscribe()
+
+        receive do
+          event -> send(event.from, event.aggregate_version)
+        end
+      end)
+
+      {:ok, event} =
+        EventStore.sync_dispatch(%UserCreated{
+          aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
+          data: @data
+        })
+
+      refute is_nil(event.aggregate_version)
+    end
+
+    test "raises in case the event is not acknowledged" do
+      assert_raise EventStore.AcknowledgementError, fn ->
+        EventStore.sync_dispatch(%UserCreated{
+          aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
+          data: @data
+        })
+      end
     end
   end
 

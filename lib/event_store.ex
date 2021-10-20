@@ -14,7 +14,7 @@ defmodule EventStore do
       |> event.__struct__.changeset()
       |> then(&@adapter.insert(&1))
 
-    event = %{event | aggregate_version: aggregate_version}
+    event = %{event | aggregate_version: aggregate_version, from: self()}
 
     Logger.debug("Event dispatched: #{inspect(event)}")
     PubSub.broadcast(EventStore.PubSub, "events", event)

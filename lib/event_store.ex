@@ -36,6 +36,12 @@ defmodule EventStore do
     end
   end
 
+  @spec acknowledge(%EventStore.Event{}) :: :ok
+  def acknowledge(event) do
+    send(event.from, event.aggregate_version)
+    :ok
+  end
+
   def subscribe() do
     PubSub.subscribe(EventStore.PubSub, "events")
   end

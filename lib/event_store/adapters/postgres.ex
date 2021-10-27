@@ -10,26 +10,35 @@ defmodule EventStore.Adapters.Postgres do
 
   @impl true
   def insert(changeset) do
-    event = Ecto.Changeset.apply_changes(changeset)
+    changeset
+    |> Ecto.Changeset.apply_changes()
+    |> insert!()
+  end
 
-    {1, [%{id: id, aggregate_version: aggregate_version} | _]} =
-      Repo.insert_all(
-        Event,
+  defp insert!(event) do
+    Repo.insert_all(
+      Event,
+      [
         [
-          [
-            # TODO: Generate the keyword list from the changeset.
-            name: event.name,
-            version: event.version,
-            aggregate_id: event.aggregate_id,
-            aggregate_version: next_aggregate_version(event),
-            payload: event.payload,
-            inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
-          ]
-        ],
-        returning: [:id, :aggregate_version]
-      )
+          # TODO: Generate the keyword list from the changeset.
+          name: event.name,
+          version: event.version,
+          aggregate_id: event.aggregate_id,
+          aggregate_version: next_aggregate_version(event),
+          payload: event.payload,
+          inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+        ]
+      ],
+      returning: [:id, :aggregate_version],
+      on_conflict: :nothing
+    )
+    |> case do
+      {1, [%{id: id, aggregate_version: aggregate_version} | _]} ->
+        {:ok, %{event | id: id, aggregate_version: aggregate_version}}
 
-    {:ok, %{event | id: id, aggregate_version: aggregate_version}}
+      {0, []} ->
+        insert!(event)
+    end
   end
 
   defp next_aggregate_version(%{aggregate_id: aggregate_id} = _event) do

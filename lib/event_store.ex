@@ -17,10 +17,11 @@ defmodule EventStore do
       |> event.__struct__.changeset()
       |> then(&@adapter.insert(&1))
 
+    topic = Atom.to_string(event.__struct__)
     event = %{event | aggregate_version: aggregate_version, from: self()}
 
     Logger.debug("Event dispatched: #{inspect(event)}")
-    PubSub.broadcast(EventStore.PubSub, "events", event)
+    PubSub.broadcast(EventStore.PubSub, topic, event)
 
     {:ok, event}
   end
@@ -42,9 +43,13 @@ defmodule EventStore do
     :ok
   end
 
-  def subscribe() do
-    PubSub.subscribe(EventStore.PubSub, "events")
+  def subscribe(events) when is_list(events) do
+    for topic <- Enum.map(events, &Atom.to_string/1) do
+      PubSub.subscribe(EventStore.PubSub, topic)
+    end
   end
+
+  def subscribe(event), do: subscribe([event])
 
   def stream(aggregate_id_or_name) do
     aggregate_id_or_name

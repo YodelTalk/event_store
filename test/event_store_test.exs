@@ -6,7 +6,7 @@ defmodule EventStoreTest do
 
   describe "dispatch/1" do
     test "dispatches the event to all subscribers" do
-      EventStore.subscribe()
+      EventStore.subscribe(UserCreated)
 
       {:ok, event} =
         EventStore.dispatch(%UserCreated{
@@ -22,8 +22,32 @@ defmodule EventStoreTest do
       }
     end
 
+    test "does not dispatch events which are not subscribed" do
+      EventStore.subscribe(UserCreated)
+
+      EventStore.dispatch(%UserCreated{
+        aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
+        payload: @data
+      })
+
+      EventStore.dispatch(%UserUpdated{
+        aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
+        payload: @data
+      })
+
+      assert_received %UserCreated{
+        aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
+        payload: @data
+      }
+
+      refute_received %UserUpdated{
+        aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
+        payload: @data
+      }
+    end
+
     test "increments aggregate_version" do
-      EventStore.subscribe()
+      EventStore.subscribe(UserCreated)
 
       aggregate_id = Ecto.UUID.generate()
 
@@ -50,7 +74,7 @@ defmodule EventStoreTest do
   describe "sync_dispatch/1" do
     test "dispatches the event to all subscribers which must acknowledge the event" do
       spawn(fn ->
-        EventStore.subscribe()
+        EventStore.subscribe(UserCreated)
 
         receive do
           event -> EventStore.acknowledge(event)

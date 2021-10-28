@@ -9,6 +9,30 @@ defmodule EventStore.Event do
       use Ecto.Schema
       import Ecto.Changeset
       alias EventStore.Event
+
+      @primary_key false
+      embedded_schema do
+        field :from, :any, virtual: true
+        field :aggregate_id, :string
+        field :aggregate_version, :integer
+        field :version, :integer, default: 1
+        field :payload, :map
+      end
+
+      def changeset(event) do
+        attrs = %{
+          aggregate_id: event.aggregate_id,
+          aggregate_version: event.aggregate_version,
+          name: __MODULE__ |> Module.split() |> List.last(),
+          payload: Jason.encode!(event.payload)
+        }
+
+        Event.changeset(%Event{}, attrs)
+      end
+
+      def cast_payload(data, payload) do
+        cast(data, %{payload: Jason.decode!(payload)}, [:payload])
+      end
     end
   end
 

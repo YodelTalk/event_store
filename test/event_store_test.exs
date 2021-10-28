@@ -11,14 +11,14 @@ defmodule EventStoreTest do
       {:ok, event} =
         EventStore.dispatch(%UserCreated{
           aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
-          data: @data
+          payload: @data
         })
 
       refute is_nil(event.aggregate_version)
 
       assert_received %UserCreated{
         aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
-        data: @data
+        payload: @data
       }
     end
 
@@ -30,19 +30,19 @@ defmodule EventStoreTest do
       {:ok, %{aggregate_version: 1}} =
         EventStore.dispatch(%UserCreated{
           aggregate_id: aggregate_id,
-          data: @data
+          payload: @data
         })
 
       {:ok, %{aggregate_version: 1}} =
         EventStore.dispatch(%UserCreated{
           aggregate_id: Ecto.UUID.generate(),
-          data: @data
+          payload: @data
         })
 
       {:ok, %{aggregate_version: 2}} =
         EventStore.dispatch(%UserCreated{
           aggregate_id: aggregate_id,
-          data: @data
+          payload: @data
         })
     end
   end
@@ -60,7 +60,7 @@ defmodule EventStoreTest do
       {:ok, event} =
         EventStore.sync_dispatch(%UserCreated{
           aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
-          data: @data
+          payload: @data
         })
 
       refute is_nil(event.aggregate_version)
@@ -70,7 +70,7 @@ defmodule EventStoreTest do
       assert_raise EventStore.AcknowledgementError, fn ->
         EventStore.sync_dispatch(%UserCreated{
           aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
-          data: @data
+          payload: @data
         })
       end
     end
@@ -80,16 +80,16 @@ defmodule EventStoreTest do
     test "returns only events for the given aggregate ID" do
       aggregate_id = Ecto.UUID.generate()
 
-      EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, data: @data})
+      EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, payload: @data})
 
       EventStore.dispatch(%UserCreated{
         aggregate_id: "fedcba98-7654-3210-fedc-ba9876543210",
-        data: @data
+        payload: @data
       })
 
       EventStore.dispatch(%UserUpdated{
         aggregate_id: aggregate_id,
-        data: @data
+        payload: @data
       })
 
       assert [first, second] = EventStore.stream(aggregate_id)
@@ -100,16 +100,16 @@ defmodule EventStoreTest do
     test "returns only events for the given event name" do
       aggregate_id = Ecto.UUID.generate()
 
-      EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, data: @data})
+      EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, payload: @data})
 
       EventStore.dispatch(%UserCreated{
         aggregate_id: "fedcba98-7654-3210-fedc-ba9876543210",
-        data: @data
+        payload: @data
       })
 
       EventStore.dispatch(%UserUpdated{
         aggregate_id: aggregate_id,
-        data: @data
+        payload: @data
       })
 
       assert events = EventStore.stream(UserCreated)
@@ -122,7 +122,7 @@ defmodule EventStoreTest do
 
     refute EventStore.exists?(aggregate_id, "UserCreated")
 
-    EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, data: @data})
+    EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, payload: @data})
     assert EventStore.exists?(aggregate_id, "UserCreated")
   end
 end

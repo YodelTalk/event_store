@@ -62,13 +62,6 @@ defmodule EventStore.Adapters.Postgres do
   end
 
   @impl true
-  @deprecated "Use exists?/2 with an atom as the second argument"
-  def exists?(aggregate_id, name) when is_binary(name) do
-    from(e in Event, where: e.aggregate_id == ^aggregate_id and e.name == ^name)
-    |> Repo.exists?()
-  end
-
-  @impl true
   def exists?(aggregate_id, event) when is_atom(event) do
     name = EventStore.to_name(event)
 

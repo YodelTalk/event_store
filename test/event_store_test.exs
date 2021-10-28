@@ -120,9 +120,9 @@ defmodule EventStoreTest do
   test "exists?/1 checks whether the given event with the specified aggregate_id exists" do
     aggregate_id = Ecto.UUID.generate()
 
-    refute EventStore.exists?(aggregate_id, "UserCreated")
+    refute EventStore.exists?(aggregate_id, UserCreated)
 
     EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, data: @data})
-    assert EventStore.exists?(aggregate_id, "UserCreated")
+    assert EventStore.exists?(aggregate_id, UserCreated)
   end
 end

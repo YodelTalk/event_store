@@ -14,6 +14,7 @@ defmodule EventStoreTest do
           payload: @data
         })
 
+      refute is_nil(event.inserted_at)
       refute is_nil(event.aggregate_version)
 
       assert_received %UserCreated{
@@ -92,6 +93,7 @@ defmodule EventStoreTest do
           payload: @data
         })
 
+      refute is_nil(event.inserted_at)
       refute is_nil(event.aggregate_version)
     end
 
@@ -124,6 +126,9 @@ defmodule EventStoreTest do
       assert [first, second] = EventStore.stream(aggregate_id)
       assert %UserCreated{aggregate_id: ^aggregate_id} = first
       assert %UserUpdated{aggregate_id: ^aggregate_id} = second
+
+      refute is_nil(first.inserted_at)
+      refute is_nil(second.inserted_at)
     end
 
     test "returns only events for the given event name" do

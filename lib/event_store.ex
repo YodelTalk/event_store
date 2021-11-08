@@ -12,16 +12,20 @@ defmodule EventStore do
 
   @spec dispatch(%EventStore.Event{}) :: {:ok, %EventStore.Event{}}
   def dispatch(event) do
-    {:ok, %{aggregate_version: aggregate_version}} =
+    {:ok, %{aggregate_version: aggregate_version, inserted_at: inserted_at}} =
       event
       |> event.__struct__.changeset()
       |> then(&@adapter.insert(&1))
 
-    topic = Atom.to_string(event.__struct__)
-    event = %{event | aggregate_version: aggregate_version, from: self()}
+    event = %{
+      event
+      | aggregate_version: aggregate_version,
+        inserted_at: inserted_at,
+        from: self()
+    }
 
     Logger.debug("Event dispatched: #{inspect(event)}")
-    PubSub.broadcast(EventStore.PubSub, topic, event)
+    PubSub.broadcast(EventStore.PubSub, Atom.to_string(event.__struct__), event)
 
     {:ok, event}
   end
@@ -58,7 +62,7 @@ defmodule EventStore do
       module = Module.safe_concat(@namespace, event.name)
 
       module
-      |> struct(%{aggregate_id: event.aggregate_id})
+      |> struct(%{aggregate_id: event.aggregate_id, inserted_at: event.inserted_at})
       |> then(&module.cast_payload(&1, event.payload))
       |> Ecto.Changeset.apply_changes()
       |> tap(&Logger.debug("Event #{event.name} loaded: #{inspect(&1)}"))

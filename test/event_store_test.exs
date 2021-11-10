@@ -111,7 +111,7 @@ defmodule EventStoreTest do
     end
   end
 
-  describe "stream/1" do
+  describe "stream/2" do
     test "returns only events for the given aggregate ID" do
       aggregate_id = Ecto.UUID.generate()
 
@@ -161,6 +161,24 @@ defmodule EventStoreTest do
         assert_event_structure(event)
       end
     end
+
+    test "only events after certain time" do
+      # We need to wait full seconds after each event
+      EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
+      :timer.sleep(1001)
+
+      {:ok, %EventStore.UserCreated{inserted_at: start_time}} =
+        EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
+
+      :timer.sleep(1001)
+      EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
+      EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
+
+      events = EventStore.stream(EventStore.UserCreated, start_time)
+
+      # only get the last 2 events
+      assert length(events) == 2
+    end
   end
 
   test "exists?/1 checks whether the given event with the specified aggregate_id exists" do
@@ -170,17 +188,6 @@ defmodule EventStoreTest do
 
     EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, payload: @data})
     assert EventStore.exists?(aggregate_id, UserCreated)
-  end
-
-  test "stream/2 with from_id" do
-    {:ok, %EventStore.UserCreated{id: first_id} = first} = EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
-    {:ok, %EventStore.UserCreated{id: _} = sec} = EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
-    {:ok, %EventStore.UserCreated{id: _} = third} = EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
-    {:ok, %EventStore.UserCreated{id: last_id} = last} = EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
-
-    events = EventStore.stream(EventStore.UserCreated, first_id+1)
-    # only get the last 2 events
-    assert length(events) == 2
   end
 
   defp assert_event_structure(event) do

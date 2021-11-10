@@ -56,9 +56,20 @@ defmodule EventStore do
 
   def subscribe(event), do: subscribe([event])
 
-  def stream(aggregate_id_or_name, from_id \\ 0) do
+  def stream(aggregate_id_or_name, later_than \\ nil) do
+    later_than =
+      later_than
+      |> case do
+        nil ->
+          {:ok, y2k} = NaiveDateTime.new(2000, 1, 1, 0, 0, 0)
+          y2k
+
+        _ ->
+          later_than
+      end
+
     aggregate_id_or_name
-    |> @adapter.stream(from_id)
+    |> @adapter.stream(later_than)
     |> Enum.map(fn event ->
       module = Module.safe_concat(@namespace, event.name)
 

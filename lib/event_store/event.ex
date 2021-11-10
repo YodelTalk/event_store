@@ -12,6 +12,7 @@ defmodule EventStore.Event do
 
       @primary_key false
       embedded_schema do
+        field :id, :integer
         field :from, :any, virtual: true
         field :aggregate_id, :string
         field :aggregate_version, :integer

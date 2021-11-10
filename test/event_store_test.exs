@@ -17,6 +17,8 @@ defmodule EventStoreTest do
       refute is_nil(event.inserted_at)
       refute is_nil(event.aggregate_version)
 
+      assert_event_structure(event)
+
       assert_received %UserCreated{
         aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
         payload: @data
@@ -95,6 +97,8 @@ defmodule EventStoreTest do
 
       refute is_nil(event.inserted_at)
       refute is_nil(event.aggregate_version)
+
+      assert_event_structure(event)
     end
 
     test "raises in case the event is not acknowledged" do
@@ -129,6 +133,10 @@ defmodule EventStoreTest do
 
       refute is_nil(first.inserted_at)
       refute is_nil(second.inserted_at)
+
+      for event <- [first, second] do
+        assert_event_structure(event)
+      end
     end
 
     test "returns only events for the given event name" do
@@ -148,6 +156,10 @@ defmodule EventStoreTest do
 
       assert events = EventStore.stream(UserCreated)
       assert Enum.all?(events, &assert(%UserCreated{} = &1))
+
+      for event <- events do
+        assert_event_structure(event)
+      end
     end
   end
 
@@ -158,5 +170,25 @@ defmodule EventStoreTest do
 
     EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, payload: @data})
     assert EventStore.exists?(aggregate_id, UserCreated)
+  end
+
+  test "stream/2 with from_id" do
+    {:ok, %EventStore.UserCreated{id: first_id} = first} = EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
+    {:ok, %EventStore.UserCreated{id: _} = sec} = EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
+    {:ok, %EventStore.UserCreated{id: _} = third} = EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
+    {:ok, %EventStore.UserCreated{id: last_id} = last} = EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
+
+    events = EventStore.stream(EventStore.UserCreated, first_id+1)
+    # only get the last 2 events
+    assert length(events) == 2
+  end
+
+  defp assert_event_structure(event) do
+    refute is_nil(event.id)
+    refute is_nil(event.aggregate_version)
+    refute is_nil(event.inserted_at)
+    assert %{} = event.payload
+    refute is_nil(event.aggregate_id)
+    assert event.version == 1
   end
 end

@@ -12,7 +12,7 @@ defmodule EventStore do
 
   @spec dispatch(%EventStore.Event{}) :: {:ok, %EventStore.Event{}}
   def dispatch(event) do
-    {:ok, %{aggregate_version: aggregate_version, inserted_at: inserted_at}} =
+    {:ok, %{aggregate_version: aggregate_version, inserted_at: inserted_at, id: id}} =
       event
       |> event.__struct__.changeset()
       |> then(&@adapter.insert(&1))
@@ -20,8 +20,9 @@ defmodule EventStore do
     event = %{
       event
       | aggregate_version: aggregate_version,
-        inserted_at: inserted_at,
-        from: self()
+        from: self(),
+        id: id,
+        inserted_at: inserted_at
     }
 
     Logger.debug("Event dispatched: #{inspect(event)}")
@@ -55,14 +56,19 @@ defmodule EventStore do
 
   def subscribe(event), do: subscribe([event])
 
-  def stream(aggregate_id_or_name) do
+  def stream(aggregate_id_or_name, from_id \\ 0) do
     aggregate_id_or_name
-    |> @adapter.stream()
+    |> @adapter.stream(from_id)
     |> Enum.map(fn event ->
       module = Module.safe_concat(@namespace, event.name)
 
       module
-      |> struct(%{aggregate_id: event.aggregate_id, inserted_at: event.inserted_at})
+      |> struct(%{
+        aggregate_id: event.aggregate_id,
+        aggregate_version: event.aggregate_version,
+        id: event.id,
+        inserted_at: event.inserted_at
+      })
       |> then(&module.cast_payload(&1, event.payload))
       |> Ecto.Changeset.apply_changes()
       |> tap(&Logger.debug("Event #{event.name} loaded: #{inspect(&1)}"))

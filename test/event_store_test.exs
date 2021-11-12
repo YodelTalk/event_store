@@ -75,7 +75,7 @@ defmodule EventStoreTest do
   end
 
   describe "sync_dispatch/1" do
-    test "dispatches the event to all subscribers which must acknowledge the event" do
+    test "dispatches the event to all subscribers which all must acknowledge the event" do
       myself = self()
 
       spawn(fn ->
@@ -87,7 +87,17 @@ defmodule EventStoreTest do
         end
       end)
 
+      spawn(fn ->
+        EventStore.subscribe(UserCreated)
+        send(myself, :ready_too)
+
+        receive do
+          event -> EventStore.acknowledge(event)
+        end
+      end)
+
       assert_receive :ready
+      assert_receive :ready_too
 
       {:ok, event} =
         EventStore.sync_dispatch(%UserCreated{
@@ -102,6 +112,8 @@ defmodule EventStoreTest do
     end
 
     test "raises in case the event is not acknowledged" do
+      EventStore.subscribe(UserCreated)
+
       assert_raise EventStore.AcknowledgementError, fn ->
         EventStore.sync_dispatch(%UserCreated{
           aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",

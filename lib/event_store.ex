@@ -32,11 +32,11 @@ defmodule EventStore do
 
   @spec dispatch(%EventStore.Event{}) :: {:ok, %EventStore.Event{}}
   def sync_dispatch(event) do
-    {:ok, %{aggregate_version: aggregate_version} = event} = dispatch(event)
+    {:ok, %{aggregate_version: aggregate_version, aggregate_id: aggregate_id} = event} = dispatch(event)
 
     for {subscriber, _} <- Registry.lookup(EventStore.PubSub, Atom.to_string(event.__struct__)) do
       receive do
-        {^subscriber, ^aggregate_version} -> nil
+        {^subscriber, ^aggregate_id, ^aggregate_version} -> nil
       after
         @sync_timeout -> raise AcknowledgementError, event
       end
@@ -47,7 +47,7 @@ defmodule EventStore do
 
   @spec acknowledge(%EventStore.Event{}) :: :ok
   def acknowledge(event) do
-    send(event.from, {self(), event.aggregate_version})
+    send(event.from, {self(), event.aggregate_id, event.aggregate_version})
     :ok
   end
 

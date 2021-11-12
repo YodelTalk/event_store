@@ -32,7 +32,8 @@ defmodule EventStore do
 
   @spec dispatch(%EventStore.Event{}) :: {:ok, %EventStore.Event{}}
   def sync_dispatch(event) do
-    {:ok, %{aggregate_version: aggregate_version, aggregate_id: aggregate_id} = event} = dispatch(event)
+    {:ok, %{aggregate_version: aggregate_version, aggregate_id: aggregate_id} = event} =
+      dispatch(event)
 
     for {subscriber, _} <- Registry.lookup(EventStore.PubSub, Atom.to_string(event.__struct__)) do
       receive do

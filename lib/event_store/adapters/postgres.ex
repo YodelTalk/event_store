@@ -26,7 +26,7 @@ defmodule EventStore.Adapters.Postgres do
           aggregate_id: event.aggregate_id,
           aggregate_version: next_aggregate_version(event),
           payload: event.payload,
-          inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+          inserted_at: event.inserted_at
         ]
       ],
       returning: [:id, :aggregate_version],

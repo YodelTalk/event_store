@@ -10,7 +10,7 @@ defmodule EventStore.Application do
     children = [
       EventStore.Adapters.InMemory,
       EventStore.Adapters.Postgres.Repo,
-      {Phoenix.PubSub, name: EventStore.PubSub}
+      EventStore.PubSub
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

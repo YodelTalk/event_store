@@ -83,6 +83,8 @@ defmodule EventStoreTest do
         receive do
           event -> EventStore.acknowledge(event)
         end
+
+        send(myself, :acknowledged)
       end)
 
       spawn(fn ->
@@ -92,6 +94,8 @@ defmodule EventStoreTest do
         receive do
           event -> EventStore.acknowledge(event)
         end
+
+        send(myself, :acknowledged_too)
       end)
 
       assert_receive :ready
@@ -105,6 +109,9 @@ defmodule EventStoreTest do
 
       refute is_nil(event.inserted_at)
       refute is_nil(event.aggregate_version)
+
+      assert_receive :acknowledged
+      assert_receive :acknowledged_too
     end
 
     test "raises in case the event is not acknowledged" do
@@ -116,6 +123,30 @@ defmodule EventStoreTest do
           payload: @data
         })
       end
+    end
+
+    test "does not raise in case a subscriber is not alive anymore" do
+      myself = self()
+
+      pid =
+        spawn(fn ->
+          EventStore.subscribe(UserCreated)
+          send(myself, :ready)
+          :timer.sleep(:infinity)
+        end)
+
+      assert_receive :ready
+
+      spawn(fn ->
+        # Ensure process is killed when waiting for the acknowledgment.
+        :timer.sleep(50)
+        Process.exit(pid, :kill)
+      end)
+
+      EventStore.sync_dispatch(%UserCreated{
+        aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
+        payload: @data
+      })
     end
   end
 

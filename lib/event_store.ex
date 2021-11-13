@@ -1,8 +1,6 @@
 defmodule EventStore do
   require Logger
-
-  alias Phoenix.PubSub
-  alias EventStore.AcknowledgementError
+  alias EventStore.{AcknowledgementError, PubSub}
 
   @adapter Application.fetch_env!(:event_store, :adapter)
   @namespace Application.get_env(:event_store, :namespace, __MODULE__)
@@ -12,6 +10,32 @@ defmodule EventStore do
 
   @spec dispatch(%EventStore.Event{}) :: {:ok, %EventStore.Event{}}
   def dispatch(event) do
+    {event, _} = dispatch_and_return_subscribers(event)
+    {:ok, event}
+  end
+
+  @spec sync_dispatch(%EventStore.Event{}) :: {:ok, %EventStore.Event{}}
+  def sync_dispatch(event) do
+    {
+      %{aggregate_id: aggregate_id, aggregate_version: aggregate_version} = event,
+      subscribers
+    } = dispatch_and_return_subscribers(event)
+
+    for subscriber <- subscribers do
+      receive do
+        {^subscriber, ^aggregate_id, ^aggregate_version} -> nil
+      after
+        @sync_timeout ->
+          if Process.alive?(subscriber) do
+            raise AcknowledgementError, {subscriber, event}
+          end
+      end
+    end
+
+    {:ok, event}
+  end
+
+  defp dispatch_and_return_subscribers(event) do
     {:ok, %{aggregate_version: aggregate_version, inserted_at: inserted_at}} =
       event
       |> event.__struct__.changeset()
@@ -24,37 +48,22 @@ defmodule EventStore do
         from: self()
     }
 
-    Logger.debug("Event dispatched: #{inspect(event)}")
-    PubSub.broadcast(EventStore.PubSub, Atom.to_string(event.__struct__), event)
+    subscribers = PubSub.broadcast(event)
+    Logger.debug("Dispatched #{inspect(event)} to #{inspect(subscribers, limit: :infinity)}")
 
-    {:ok, event}
-  end
-
-  @spec dispatch(%EventStore.Event{}) :: {:ok, %EventStore.Event{}}
-  def sync_dispatch(event) do
-    {:ok, %{aggregate_version: aggregate_version, aggregate_id: aggregate_id} = event} =
-      dispatch(event)
-
-    for {subscriber, _} <- Registry.lookup(EventStore.PubSub, Atom.to_string(event.__struct__)) do
-      receive do
-        {^subscriber, ^aggregate_id, ^aggregate_version} -> nil
-      after
-        @sync_timeout -> raise AcknowledgementError, event
-      end
-    end
-
-    {:ok, event}
+    {event, subscribers}
   end
 
   @spec acknowledge(%EventStore.Event{}) :: :ok
   def acknowledge(event) do
+    Logger.debug("Subscriber #{inspect(self())} acknowledged #{inspect(event)}")
     send(event.from, {self(), event.aggregate_id, event.aggregate_version})
     :ok
   end
 
   def subscribe(events) when is_list(events) do
     for topic <- Enum.map(events, &Atom.to_string/1) do
-      PubSub.subscribe(EventStore.PubSub, topic)
+      PubSub.subscribe(topic)
     end
   end
 

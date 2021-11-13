@@ -124,6 +124,30 @@ defmodule EventStoreTest do
         })
       end
     end
+
+    test "does not raise in case a subscriber is not alive anymore" do
+      myself = self()
+
+      pid =
+        spawn(fn ->
+          EventStore.subscribe(UserCreated)
+          send(myself, :ready)
+          :timer.sleep(:infinity)
+        end)
+
+      assert_receive :ready
+
+      spawn(fn ->
+        # Ensure process is killed when waiting for the acknowledgment.
+        :timer.sleep(50)
+        Process.exit(pid, :kill)
+      end)
+
+      EventStore.sync_dispatch(%UserCreated{
+        aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
+        payload: @data
+      })
+    end
   end
 
   describe "stream/1" do

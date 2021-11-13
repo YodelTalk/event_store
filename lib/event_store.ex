@@ -25,7 +25,10 @@ defmodule EventStore do
       receive do
         {^subscriber, ^aggregate_id, ^aggregate_version} -> nil
       after
-        @sync_timeout -> raise AcknowledgementError, {subscriber, event}
+        @sync_timeout ->
+          if Process.alive?(subscriber) do
+            raise AcknowledgementError, {subscriber, event}
+          end
       end
     end
 

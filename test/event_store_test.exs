@@ -83,6 +83,8 @@ defmodule EventStoreTest do
         receive do
           event -> EventStore.acknowledge(event)
         end
+
+        send(myself, :acknowledged)
       end)
 
       spawn(fn ->
@@ -92,6 +94,8 @@ defmodule EventStoreTest do
         receive do
           event -> EventStore.acknowledge(event)
         end
+
+        send(myself, :acknowledged_too)
       end)
 
       assert_receive :ready
@@ -105,6 +109,9 @@ defmodule EventStoreTest do
 
       refute is_nil(event.inserted_at)
       refute is_nil(event.aggregate_version)
+
+      assert_receive :acknowledged
+      assert_receive :acknowledged_too
     end
 
     test "raises in case the event is not acknowledged" do

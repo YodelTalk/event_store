@@ -2,9 +2,9 @@ defmodule EventStore do
   require Logger
   alias EventStore.{AcknowledgementError, PubSub}
 
-  @adapter Application.fetch_env!(:event_store, :adapter)
-  @namespace Application.get_env(:event_store, :namespace, __MODULE__)
-  @sync_timeout Application.get_env(:event_store, :sync_timeout, 5000)
+  @adapter Application.compile_env!(:event_store, :adapter)
+  @namespace Application.compile_env(:event_store, :namespace, __MODULE__)
+  @sync_timeout Application.compile_env(:event_store, :sync_timeout, 5000)
 
   defdelegate exists?(aggregate_id, name), to: @adapter
 

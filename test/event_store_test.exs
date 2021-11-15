@@ -14,8 +14,7 @@ defmodule EventStoreTest do
           payload: @data
         })
 
-      refute is_nil(event.inserted_at)
-      refute is_nil(event.aggregate_version)
+      assert_event_structure(event)
 
       assert_received %UserCreated{
         aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
@@ -107,8 +106,7 @@ defmodule EventStoreTest do
           payload: @data
         })
 
-      refute is_nil(event.inserted_at)
-      refute is_nil(event.aggregate_version)
+      assert_event_structure(event)
 
       assert_receive :acknowledged
       assert_receive :acknowledged_too
@@ -150,7 +148,7 @@ defmodule EventStoreTest do
     end
   end
 
-  describe "stream/1" do
+  describe "stream/2" do
     test "returns only events for the given aggregate ID" do
       aggregate_id = Ecto.UUID.generate()
 
@@ -170,8 +168,8 @@ defmodule EventStoreTest do
       assert %UserCreated{aggregate_id: ^aggregate_id} = first
       assert %UserUpdated{aggregate_id: ^aggregate_id} = second
 
-      refute is_nil(first.inserted_at)
-      refute is_nil(second.inserted_at)
+      assert_event_structure(first)
+      assert_event_structure(second)
     end
 
     test "returns only events for the given event name" do
@@ -192,6 +190,21 @@ defmodule EventStoreTest do
       assert events = EventStore.stream(UserCreated)
       assert Enum.all?(events, &assert(%UserCreated{} = &1))
     end
+
+    test "returns only events after certain time" do
+      EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
+
+      {:ok, %UserCreated{inserted_at: start_time}} =
+        EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
+
+      EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
+      EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
+
+      all_events = EventStore.stream(UserCreated)
+      limited_events = EventStore.stream(UserCreated, start_time)
+
+      assert length(all_events) > length(limited_events)
+    end
   end
 
   test "exists?/1 checks whether the given event with the specified aggregate_id exists" do
@@ -201,5 +214,12 @@ defmodule EventStoreTest do
 
     EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, payload: @data})
     assert EventStore.exists?(aggregate_id, UserCreated)
+  end
+
+  defp assert_event_structure(event) do
+    refute is_nil(event.aggregate_id)
+    refute is_nil(event.aggregate_version)
+    assert %{} = event.payload
+    refute is_nil(event.inserted_at)
   end
 end

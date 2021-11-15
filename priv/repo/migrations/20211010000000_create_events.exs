@@ -8,8 +8,7 @@ defmodule EventStore.Repo.Migrations.CreateEvents do
       add :aggregate_id, :string, null: false
       add :aggregate_version, :bigint, null: false
       add :payload, :text
-
-      timestamps updated_at: false, null: false
+      add :inserted_at, :utc_datetime_usec, null: false
     end
   end
 end

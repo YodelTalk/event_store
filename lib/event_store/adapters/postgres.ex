@@ -49,15 +49,21 @@ defmodule EventStore.Adapters.Postgres do
   end
 
   @impl true
-  def stream(aggregate_id) when is_binary(aggregate_id) do
-    from(e in Event, where: e.aggregate_id == ^aggregate_id, order_by: :id)
+  def stream(aggregate_id, timestamp) when is_binary(aggregate_id) do
+    from(e in Event,
+      where: e.aggregate_id == ^aggregate_id and e.inserted_at > ^timestamp,
+      order_by: :inserted_at
+    )
     |> Repo.all()
   end
 
-  def stream(event) when is_atom(event) do
+  def stream(event, timestamp) when is_atom(event) do
     name = EventStore.to_name(event)
 
-    from(e in Event, where: e.name == ^name, order_by: :id)
+    from(e in Event,
+      where: e.name == ^name and e.inserted_at > ^timestamp,
+      order_by: :inserted_at
+    )
     |> Repo.all()
   end
 

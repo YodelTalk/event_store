@@ -69,14 +69,18 @@ defmodule EventStore do
 
   def subscribe(event), do: subscribe([event])
 
-  def stream(aggregate_id_or_name) do
+  def stream(aggregate_id_or_name, timestamp \\ NaiveDateTime.new!(2000, 1, 1, 0, 0, 0)) do
     aggregate_id_or_name
-    |> @adapter.stream()
+    |> @adapter.stream(timestamp)
     |> Enum.map(fn event ->
       module = Module.safe_concat(@namespace, event.name)
 
       module
-      |> struct(%{aggregate_id: event.aggregate_id, inserted_at: event.inserted_at})
+      |> struct(%{
+        aggregate_id: event.aggregate_id,
+        aggregate_version: event.aggregate_version,
+        inserted_at: event.inserted_at
+      })
       |> then(&module.cast_payload(&1, event.payload))
       |> Ecto.Changeset.apply_changes()
       |> tap(&Logger.debug("Event #{event.name} loaded: #{inspect(&1)}"))

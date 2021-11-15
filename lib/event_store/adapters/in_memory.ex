@@ -19,7 +19,7 @@ defmodule EventStore.Adapters.InMemory do
     # TODO: Improve the performance of the next_aggregate_version.
     next_aggregate_version =
       changeset.changes.aggregate_id
-      |> stream()
+      |> stream(NaiveDateTime.new!(2000, 1, 1, 0, 0, 0))
       |> Enum.count()
       |> then(&(&1 + 1))
 
@@ -35,18 +35,18 @@ defmodule EventStore.Adapters.InMemory do
   end
 
   @impl true
-  def stream(aggregate_id) when is_binary(aggregate_id) do
+  def stream(aggregate_id, timestamp) when is_binary(aggregate_id) do
     Agent.get(__MODULE__, & &1)
-    |> Enum.filter(&(&1.aggregate_id == aggregate_id))
+    |> Enum.filter(&(&1.aggregate_id == aggregate_id && &1.inserted_at > timestamp))
     |> Enum.reverse()
   end
 
   @impl true
-  def stream(event) when is_atom(event) do
+  def stream(event, timestamp) when is_atom(event) do
     name = EventStore.to_name(event)
 
     Agent.get(__MODULE__, & &1)
-    |> Enum.filter(&(&1.name == name))
+    |> Enum.filter(&(&1.name == name && &1.inserted_at > timestamp))
     |> Enum.reverse()
   end
 

@@ -17,7 +17,7 @@ defmodule EventStore.Event do
         field :aggregate_version, :integer
         field :version, :integer, default: 1
         field :payload, :map
-        field :inserted_at, :naive_datetime, null: false
+        field :inserted_at, :naive_datetime_usec, null: false
       end
 
       def changeset(event) do
@@ -40,13 +40,14 @@ defmodule EventStore.Event do
   @callback changeset(struct()) :: Ecto.Changeset.t()
   @callback cast_payload(Ecto.Schema.t(), map()) :: Ecto.Changeset.t()
 
+  @primary_key {:id, :binary_id, autogenerate: true}
   schema "events" do
     field :name, :string
     field :version, :integer, default: 1
     field :aggregate_id, :string
     field :aggregate_version, :integer
     field :payload, :string
-    field :inserted_at, :naive_datetime, null: false
+    field :inserted_at, :naive_datetime_usec, null: false
   end
 
   @doc false
@@ -54,6 +55,6 @@ defmodule EventStore.Event do
     event
     |> cast(attrs, [:aggregate_id, :version, :name, :payload])
     |> validate_required([:aggregate_id, :version, :name, :payload])
-    |> put_change(:inserted_at, Ecto.Schema.__timestamps__(:naive_datetime))
+    |> put_change(:inserted_at, Ecto.Schema.__timestamps__(:naive_datetime_usec))
   end
 end

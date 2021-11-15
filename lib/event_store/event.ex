@@ -40,6 +40,7 @@ defmodule EventStore.Event do
   @callback changeset(struct()) :: Ecto.Changeset.t()
   @callback cast_payload(Ecto.Schema.t(), map()) :: Ecto.Changeset.t()
 
+  @primary_key {:id, :binary_id, autogenerate: true}
   schema "events" do
     field :name, :string
     field :version, :integer, default: 1

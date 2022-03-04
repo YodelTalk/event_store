@@ -216,6 +216,27 @@ defmodule EventStoreTest do
     assert EventStore.exists?(aggregate_id, UserCreated)
   end
 
+  test "supports mocking of NaiveDateTime.utc_now/1" do
+    utc_now = ~N[2022-01-01 00:00:00]
+
+    start_supervised!({MockNaiveDateTime, utc_now: utc_now})
+    Process.put(:naive_date_time, MockNaiveDateTime)
+
+    EventStore.subscribe([UserCreated, UserUpdated])
+
+    {:ok, _} =
+      EventStore.dispatch(%UserCreated{
+        aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
+        payload: @data
+      })
+
+    assert_received %UserCreated{
+      aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
+      payload: @data,
+      inserted_at: ^utc_now
+    }
+  end
+
   defp assert_event_structure(event) do
     refute is_nil(event.aggregate_id)
     refute is_nil(event.aggregate_version)

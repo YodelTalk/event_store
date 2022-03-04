@@ -217,7 +217,7 @@ defmodule EventStoreTest do
   end
 
   test "supports mocking of NaiveDateTime.utc_now/1" do
-    utc_now = ~N[2022-01-01 00:00:00]
+    utc_now = ~N[2022-01-01 00:00:00.000000]
 
     start_supervised!({MockNaiveDateTime, utc_now: utc_now})
     Process.put(:naive_date_time, MockNaiveDateTime)

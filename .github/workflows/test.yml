@@ -30,7 +30,7 @@ jobs:
       fail-fast: true
       matrix:
         adapter: [InMemory, Postgres]
-        elixir: [1.12]
+        elixir: [1.12, 1.13]
         otp: [22.x, 23.x, 24.x]
 
     steps:

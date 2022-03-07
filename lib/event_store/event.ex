@@ -52,9 +52,11 @@ defmodule EventStore.Event do
 
   @doc false
   def changeset(event, attrs) do
+    inserted_at = apply(Process.get(:naive_date_time, NaiveDateTime), :utc_now, [])
+
     event
     |> cast(attrs, [:aggregate_id, :version, :name, :payload])
     |> validate_required([:aggregate_id, :version, :name, :payload])
-    |> put_change(:inserted_at, Ecto.Schema.__timestamps__(:naive_datetime_usec))
+    |> put_change(:inserted_at, inserted_at)
   end
 end

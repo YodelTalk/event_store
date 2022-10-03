@@ -135,11 +135,7 @@ defmodule EventStoreTest do
 
       assert_receive :ready
 
-      spawn(fn ->
-        # Ensure process is killed when waiting for the acknowledgment.
-        :timer.sleep(50)
-        Process.exit(pid, :kill)
-      end)
+      Process.exit(pid, :kill)
 
       EventStore.sync_dispatch(%UserCreated{
         aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",

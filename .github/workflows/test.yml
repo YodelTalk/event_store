@@ -36,10 +36,6 @@ jobs:
         exclude:
           - elixir: 1.12
             otp: 25.x
-          - elixir: 1.13
-            otp: 21.x
-          - elixir: 1.14
-            otp: 21.x
           - elixir: 1.14
             otp: 22.x
 

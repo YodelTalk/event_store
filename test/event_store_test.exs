@@ -160,7 +160,13 @@ defmodule EventStoreTest do
         payload: @data
       })
 
-      assert [first, second] = aggregate_id |> EventStore.stream() |> Enum.to_list()
+      assert {:ok, [first, second]} =
+               EventStore.Adapters.Postgres.Repo.transaction(fn ->
+                 aggregate_id
+                 |> EventStore.stream()
+                 |> Enum.to_list()
+               end)
+
       assert %UserCreated{aggregate_id: ^aggregate_id} = first
       assert %UserUpdated{aggregate_id: ^aggregate_id} = second
 
@@ -183,8 +189,11 @@ defmodule EventStoreTest do
         payload: @data
       })
 
-      assert events = EventStore.stream(UserCreated)
-      assert Enum.all?(events, &assert(%UserCreated{} = &1))
+      EventStore.Adapters.Postgres.Repo.transaction(fn ->
+        assert UserCreated
+               |> EventStore.stream()
+               |> Enum.all?(&assert(%UserCreated{} = &1))
+      end)
     end
 
     test "returns only events after certain time" do
@@ -196,10 +205,12 @@ defmodule EventStoreTest do
       EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
       EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
 
-      all_events = UserCreated |> EventStore.stream() |> Enum.to_list()
-      limited_events = UserCreated |> EventStore.stream(start_time) |> Enum.to_list()
+      EventStore.Adapters.Postgres.Repo.transaction(fn ->
+        all_events = UserCreated |> EventStore.stream() |> Enum.to_list()
+        limited_events = UserCreated |> EventStore.stream(start_time) |> Enum.to_list()
 
-      assert length(all_events) > length(limited_events)
+        assert length(all_events) > length(limited_events)
+      end)
     end
   end
 

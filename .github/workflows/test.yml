@@ -30,7 +30,7 @@ jobs:
       fail-fast: true
       matrix:
         adapter: [InMemory, Postgres]
-        elixir: [1.10, 1.11, 1.12, 1.13, 1.14]
+        elixir: ["1.10", 1.11, 1.12, 1.13, 1.14]
         otp: [21.x, 22.x, 23.x, 24.x, 25.x]
         # https://hexdocs.pm/elixir/1.14.0/compatibility-and-deprecations.html#compatibility-between-elixir-and-erlang-otp
         exclude:

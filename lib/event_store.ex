@@ -72,7 +72,7 @@ defmodule EventStore do
   def stream(aggregate_id_or_name, timestamp \\ NaiveDateTime.new!(2000, 1, 1, 0, 0, 0)) do
     aggregate_id_or_name
     |> @adapter.stream(timestamp)
-    |> Enum.map(fn event ->
+    |> Stream.map(fn event ->
       module = Module.safe_concat(@namespace, event.name)
 
       module

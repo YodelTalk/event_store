@@ -164,7 +164,7 @@ defmodule EventStoreTest do
         payload: @data
       })
 
-      assert [first, second] = EventStore.stream(aggregate_id)
+      assert [first, second] = aggregate_id |> EventStore.stream() |> Enum.to_list()
       assert %UserCreated{aggregate_id: ^aggregate_id} = first
       assert %UserUpdated{aggregate_id: ^aggregate_id} = second
 
@@ -200,8 +200,8 @@ defmodule EventStoreTest do
       EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
       EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
 
-      all_events = EventStore.stream(UserCreated)
-      limited_events = EventStore.stream(UserCreated, start_time)
+      all_events = UserCreated |> EventStore.stream() |> Enum.to_list()
+      limited_events = UserCreated |> EventStore.stream(start_time) |> Enum.to_list()
 
       assert length(all_events) > length(limited_events)
     end

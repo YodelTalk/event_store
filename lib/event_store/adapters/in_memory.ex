@@ -37,8 +37,8 @@ defmodule EventStore.Adapters.InMemory do
   @impl true
   def stream(aggregate_id, timestamp) when is_binary(aggregate_id) do
     Agent.get(__MODULE__, & &1)
-    |> Enum.filter(&(&1.aggregate_id == aggregate_id && &1.inserted_at > timestamp))
     |> Enum.reverse()
+    |> Stream.filter(&(&1.aggregate_id == aggregate_id && &1.inserted_at > timestamp))
   end
 
   @impl true
@@ -46,8 +46,8 @@ defmodule EventStore.Adapters.InMemory do
     name = EventStore.to_name(event)
 
     Agent.get(__MODULE__, & &1)
-    |> Enum.filter(&(&1.name == name && &1.inserted_at > timestamp))
     |> Enum.reverse()
+    |> Stream.filter(&(&1.name == name && &1.inserted_at > timestamp))
   end
 
   @impl true

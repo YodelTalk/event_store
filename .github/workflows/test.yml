@@ -30,8 +30,14 @@ jobs:
       fail-fast: true
       matrix:
         adapter: [InMemory, Postgres]
-        elixir: [1.12, 1.13]
-        otp: [22.x, 23.x, 24.x]
+        elixir: [1.12, 1.13, 1.14]
+        otp: [22.x, 23.x, 24.x, 25.x]
+        # https://hexdocs.pm/elixir/1.14.0/compatibility-and-deprecations.html#compatibility-between-elixir-and-erlang-otp
+        exclude:
+          - elixir: 1.12
+            otp: 25.x
+          - elixir: 1.14
+            otp: 22.x
 
     steps:
       - uses: actions/checkout@v2

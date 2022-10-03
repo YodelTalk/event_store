@@ -54,7 +54,7 @@ defmodule EventStore.Adapters.Postgres do
       where: e.aggregate_id == ^aggregate_id and e.inserted_at > ^timestamp,
       order_by: :inserted_at
     )
-    |> Repo.all()
+    |> Repo.stream()
   end
 
   def stream(event, timestamp) when is_atom(event) do
@@ -64,7 +64,7 @@ defmodule EventStore.Adapters.Postgres do
       where: e.name == ^name and e.inserted_at > ^timestamp,
       order_by: :inserted_at
     )
-    |> Repo.all()
+    |> Repo.stream()
   end
 
   @impl true

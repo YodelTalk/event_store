@@ -92,4 +92,6 @@ defmodule EventStore do
     |> Atom.to_string()
     |> String.replace_prefix("#{@namespace}.", "")
   end
+
+  def adapter(), do: @adapter
 end

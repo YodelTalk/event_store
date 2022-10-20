@@ -17,7 +17,7 @@ defmodule EventStore.Event do
         field :aggregate_version, :integer
         field :version, :integer, default: 1
         field :payload, :map
-        field :inserted_at, :naive_datetime_usec, null: false
+        field :inserted_at, :naive_datetime_usec
       end
 
       def changeset(event) do
@@ -47,7 +47,7 @@ defmodule EventStore.Event do
     field :aggregate_id, :string
     field :aggregate_version, :integer
     field :payload, :string
-    field :inserted_at, :naive_datetime_usec, null: false
+    field :inserted_at, :naive_datetime_usec
   end
 
   @doc false

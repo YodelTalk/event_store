@@ -161,7 +161,7 @@ defmodule EventStoreTest do
       })
 
       assert {:ok, [first, second]} =
-               EventStore.Adapters.Postgres.Repo.transaction(fn ->
+               transaction(fn ->
                  aggregate_id
                  |> EventStore.stream()
                  |> Enum.to_list()
@@ -189,7 +189,7 @@ defmodule EventStoreTest do
         payload: @data
       })
 
-      EventStore.Adapters.Postgres.Repo.transaction(fn ->
+      transaction(fn ->
         assert UserCreated
                |> EventStore.stream()
                |> Enum.all?(&assert(%UserCreated{} = &1))
@@ -205,7 +205,7 @@ defmodule EventStoreTest do
       EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
       EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
 
-      EventStore.Adapters.Postgres.Repo.transaction(fn ->
+      transaction(fn ->
         all_events = UserCreated |> EventStore.stream() |> Enum.to_list()
         limited_events = UserCreated |> EventStore.stream(start_time) |> Enum.to_list()
 
@@ -250,5 +250,12 @@ defmodule EventStoreTest do
     refute is_nil(event.aggregate_version)
     assert %{} = event.payload
     refute is_nil(event.inserted_at)
+  end
+
+  defp transaction(fun) do
+    case EventStore.adapter() do
+      EventStore.Adapters.InMemory -> {:ok, fun.()}
+      EventStore.Adapters.Postgres -> EventStore.Adapters.Postgres.Repo.transaction(fun)
+    end
   end
 end

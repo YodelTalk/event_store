@@ -2,7 +2,7 @@ defmodule EventStore do
   require Logger
   alias EventStore.{AcknowledgementError, PubSub}
 
-  @adapter Application.compile_env!(:event_store, :adapter)
+  @adapter Application.compile_env(:event_store, :adapter, EventStore.Adapters.InMemory)
   @namespace Application.compile_env(:event_store, :namespace, __MODULE__)
   @sync_timeout Application.compile_env(:event_store, :sync_timeout, 5000)
 

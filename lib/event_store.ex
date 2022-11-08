@@ -73,7 +73,7 @@ defmodule EventStore do
         from: self()
     }
 
-    subscribers = PubSub.broadcast(event)
+    subscribers = pub_sub().broadcast(event)
     Logger.debug("Dispatched #{inspect(event)} to #{inspect(subscribers, limit: :infinity)}")
 
     {event, subscribers}
@@ -96,7 +96,7 @@ defmodule EventStore do
 
   def subscribe(events) when is_list(events) do
     for topic <- Enum.map(events, &Atom.to_string/1) do
-      PubSub.subscribe(topic)
+      pub_sub().subscribe(topic)
     end
   end
 
@@ -149,4 +149,6 @@ defmodule EventStore do
   Returns the configured adapter for the EventStore.
   """
   def adapter(), do: @adapter
+
+  def pub_sub(), do: EventStore.PubSub.Registry
 end

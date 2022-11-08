@@ -5,7 +5,7 @@ defmodule EventStore.Application do
   @doc false
   @impl true
   def start(_type, _args) do
-    children = [EventStore.PubSub] ++ extra_children(EventStore.adapter())
+    children = [EventStore.PubSub.Registry] ++ extra_children(EventStore.adapter())
 
     opts = [strategy: :one_for_one, name: EventStore.Supervisor]
     Supervisor.start_link(children, opts)

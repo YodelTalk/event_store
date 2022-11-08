@@ -9,12 +9,13 @@ defmodule EventStore.PubSub.Registry do
   end
 
   @impl true
-  def subscribe(topic) do
-    Registry.register(__MODULE__, topic, nil)
+  def subscribe(topic) when is_atom(topic) do
+    Registry.register(__MODULE__, Atom.to_string(topic), nil)
+    :ok
   end
 
   @impl true
-  def broadcast(event) do
+  def broadcast(event) when is_struct(event) do
     topic = Atom.to_string(event.__struct__)
 
     for {pid, _} <- Registry.lookup(__MODULE__, topic) do

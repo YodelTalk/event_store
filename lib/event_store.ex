@@ -95,9 +95,7 @@ defmodule EventStore do
   def subscribe(event) when is_atom(event), do: subscribe([event])
 
   def subscribe(events) when is_list(events) do
-    for topic <- Enum.map(events, &Atom.to_string/1) do
-      pub_sub().subscribe(topic)
-    end
+    for event <- events, do: pub_sub().subscribe(event)
   end
 
   @doc """

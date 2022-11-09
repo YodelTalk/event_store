@@ -20,7 +20,7 @@ defmodule EventStore.PubSub.PostgresTest do
            repo_config ++ [name: EventStore.PubSub.Postgres.Notifications]},
           EventStore.PubSub.Postgres
         ],
-        do: start_supervised!(app)
+        do: start_supervised(app)
 
     :ok
   end

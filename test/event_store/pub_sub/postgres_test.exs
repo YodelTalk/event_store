@@ -1,5 +1,5 @@
 defmodule EventStore.PubSub.PostgresTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias EventStore.PubSub.Postgres
   alias EventStore.{UserCreated, UserUpdated}
@@ -14,16 +14,13 @@ defmodule EventStore.PubSub.PostgresTest do
   setup do
     repo_config = EventStore.Adapters.Postgres.Repo.config()
 
-    apps = [
-      EventStore.Adapters.Postgres.Repo,
-      {Registry, keys: :duplicate, name: EventStore.PubSub.Postgres.Registry},
-      {Postgrex.Notifications, repo_config ++ [name: EventStore.PubSub.Postgres.Notifications]},
-      EventStore.PubSub.Postgres
-    ]
-
-    for app <- apps do
-      start_supervised!(app)
-    end
+    for app <- [
+          EventStore.Adapters.Postgres.Repo,
+          {Postgrex.Notifications,
+           repo_config ++ [name: EventStore.PubSub.Postgres.Notifications]},
+          EventStore.PubSub.Postgres
+        ],
+        do: start_supervised!(app)
 
     :ok
   end

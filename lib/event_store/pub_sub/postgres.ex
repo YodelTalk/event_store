@@ -21,20 +21,15 @@ defmodule EventStore.PubSub.Postgres do
       raise "#{__MODULE__} is not running"
     end
 
-    Registry.register(__MODULE__.Registry, Atom.to_string(topic), nil)
-
-    :ok
+    EventStore.PubSub.Registry.subscribe(topic)
   end
 
   @impl true
   def broadcast(event) when is_struct(event) do
-    payload = %{
-      id: event.id,
-      name: EventStore.to_name(event),
-      version: event.version
-    }
-
-    Ecto.Adapters.SQL.query!(Repo, "NOTIFY #{@channel}, '#{Jason.encode!(payload)}'")
+    Ecto.Adapters.SQL.query!(
+      Repo,
+      "NOTIFY #{@channel}, '#{event.id}:#{EventStore.to_name(event)}'"
+    )
 
     # Always return an empty list because there is currently no way to get
     # informed about potential subscribers
@@ -45,21 +40,21 @@ defmodule EventStore.PubSub.Postgres do
 
   @impl true
   def init(_) do
-    {:ok, ref} = Notifications.listen(__MODULE__.Notifications, @channel)
-    {:ok, ref}
+    {:ok, _ref} = Notifications.listen(__MODULE__.Notifications, @channel)
+    {:ok, []}
   end
 
   @impl true
-  def handle_info({:notification, _pid, _ref, @channel, payload}, state) do
-    %{"id" => id, "name" => name} = Jason.decode!(payload)
+  def handle_info(
+        {:notification, _pid, _ref, @channel, <<id::binary-size(36), ":", _name::binary>>},
+        state
+      ) do
+    # TODO: Filter unused events before loading them from the database!
 
-    topic = Atom.to_string(Module.safe_concat(EventStore.namespace(), name))
-    event = EventStore.Event |> Repo.get!(id) |> EventStore.cast()
-
-    for {pid, _} <- Registry.lookup(__MODULE__.Registry, topic) do
-      send(pid, event)
-      pid
-    end
+    EventStore.Event
+    |> Repo.get!(id)
+    |> EventStore.cast()
+    |> EventStore.PubSub.Registry.broadcast()
 
     {:noreply, state}
   end

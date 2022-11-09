@@ -1,5 +1,5 @@
 defmodule EventStore.PubSub.RegistryTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias EventStore.PubSub.Registry
   alias EventStore.{UserCreated, UserUpdated}

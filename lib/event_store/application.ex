@@ -5,24 +5,19 @@ defmodule EventStore.Application do
   @doc false
   @impl true
   def start(_type, _args) do
-    children = children(EventStore.adapter(), EventStore.pub_sub())
+    children =
+      [EventStore.PubSub.Registry] ++ children(EventStore.adapter(), EventStore.pub_sub())
 
     opts = [strategy: :one_for_one, name: EventStore.Supervisor]
     Supervisor.start_link(children, opts)
   end
 
   defp children(EventStore.Adapters.InMemory, _) do
-    [
-      EventStore.Adapters.InMemory,
-      EventStore.PubSub.Registry
-    ]
+    [EventStore.Adapters.InMemory]
   end
 
   defp children(EventStore.Adapters.Postgres, EventStore.PubSub.Registry) do
-    [
-      EventStore.Adapters.Postgres.Repo,
-      EventStore.PubSub.Registry
-    ]
+    [EventStore.Adapters.Postgres.Repo]
   end
 
   defp children(EventStore.Adapters.Postgres, EventStore.PubSub.Postgres) do
@@ -30,7 +25,6 @@ defmodule EventStore.Application do
 
     [
       EventStore.Adapters.Postgres.Repo,
-      {Registry, keys: :duplicate, name: EventStore.PubSub.Postgres.Registry},
       {Postgrex.Notifications, repo_config ++ [name: EventStore.PubSub.Postgres.Notifications]},
       EventStore.PubSub.Postgres
     ]

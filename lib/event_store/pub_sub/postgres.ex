@@ -17,10 +17,7 @@ defmodule EventStore.PubSub.Postgres do
 
   @impl true
   def subscribe(topic) when is_atom(topic) do
-    if is_nil(Process.whereis(__MODULE__)) do
-      raise "#{__MODULE__} is not running"
-    end
-
+    GenServer.cast(__MODULE__, {:subscribe, EventStore.to_name(topic)})
     EventStore.PubSub.Registry.subscribe(topic)
   end
 
@@ -32,7 +29,7 @@ defmodule EventStore.PubSub.Postgres do
     )
 
     # Always return an empty list because there is currently no way to get
-    # informed about potential subscribers
+    # the list of subscribers.
     []
   end
 
@@ -45,17 +42,22 @@ defmodule EventStore.PubSub.Postgres do
   end
 
   @impl true
+  def handle_cast({:subscribe, topic}, topics) do
+    {:noreply, Enum.uniq([topic | topics])}
+  end
+
+  @impl true
   def handle_info(
-        {:notification, _pid, _ref, @channel, <<id::binary-size(36), ":", _name::binary>>},
-        state
+        {:notification, _pid, _ref, @channel, <<id::binary-size(36), ":", topic::binary>>},
+        topics
       ) do
-    # TODO: Filter unused events before loading them from the database!
+    if topic in topics do
+      EventStore.Event
+      |> Repo.get!(id)
+      |> EventStore.cast()
+      |> EventStore.PubSub.Registry.broadcast()
+    end
 
-    EventStore.Event
-    |> Repo.get!(id)
-    |> EventStore.cast()
-    |> EventStore.PubSub.Registry.broadcast()
-
-    {:noreply, state}
+    {:noreply, topics}
   end
 end

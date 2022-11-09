@@ -45,4 +45,18 @@ defmodule EventStore.PubSub.PostgresTest do
     assert_receive {:received, ^user_created, ^pid1}
     refute_receive {:received, ^user_created, ^pid2}
   end
+
+  test "broadcast/1 does not load unnecessary events" do
+    ref = Process.monitor(Postgres)
+    Postgres.subscribe(UserUpdated)
+
+    user_created = EventStore.insert_with_adapter(@user_created, EventStore.Adapters.Postgres)
+    # Deleting all events should result in the event not being fetchable again,
+    # which anyways should not happen.
+    EventStore.Adapters.Postgres.Repo.delete_all(EventStore.Event)
+
+    assert is_list(Postgres.broadcast(user_created))
+    # Ensure the pub_sub process is not restarted
+    refute_receive {:DOWN, ^ref, _, _, _}
+  end
 end

@@ -19,7 +19,7 @@ defmodule EventStore.PubSub.RegistryTest do
     pid1 = spawn_subscriber(Registry, UserCreated, self())
     pid2 = spawn_subscriber(Registry, UserUpdated, self())
 
-    Registry.broadcast(@user_created)
+    assert is_list(Registry.broadcast(@user_created))
 
     assert_receive {:received, @user_created, ^pid1}
     refute_receive {:received, @user_created, ^pid2}

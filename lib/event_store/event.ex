@@ -15,7 +15,6 @@ defmodule EventStore.Event do
       import Ecto.Changeset
       alias EventStore.Event
 
-      @primary_key false
       embedded_schema do
         field :from, :any, virtual: true
         field :aggregate_id, :string

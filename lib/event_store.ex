@@ -5,11 +5,19 @@ defmodule EventStore do
 
   require Logger
   import EventStore.Guards
-  alias EventStore.{AcknowledgementError, Event, PubSub}
+  alias EventStore.{AcknowledgementError, Event}
 
-  @adapter Application.compile_env(:event_store, :adapter, EventStore.Adapters.InMemory)
   @namespace Application.compile_env(:event_store, :namespace, __MODULE__)
   @sync_timeout Application.compile_env(:event_store, :sync_timeout, 5000)
+
+  def namespace(), do: @namespace
+
+  @adapter Application.compile_env(:event_store, :adapter, EventStore.Adapters.InMemory)
+
+  @doc """
+  Returns the configured adapter for the EventStore.
+  """
+  def adapter(), do: @adapter
 
   @doc """
   Checks if an event with a specific aggregate ID and name exists.
@@ -25,6 +33,10 @@ defmodule EventStore do
   Retrieves the last event with a specific aggregate ID and name.
   """
   defdelegate last(aggregate_id, name), to: @adapter
+
+  @pub_sub Application.compile_env(:event_store, :pub_sub, EventStore.PubSub.Registry)
+
+  def pub_sub(), do: @pub_sub
 
   @doc """
   Dispatches an event to the EventStore.
@@ -61,22 +73,27 @@ defmodule EventStore do
   end
 
   defp dispatch_and_return_subscribers(event) do
-    {:ok, %{aggregate_version: aggregate_version, inserted_at: inserted_at}} =
-      event
-      |> event.__struct__.changeset()
-      |> then(&@adapter.insert(&1))
-
-    event = %{
-      event
-      | aggregate_version: aggregate_version,
-        inserted_at: inserted_at,
-        from: self()
-    }
-
+    event = insert_with_adapter(event, adapter())
     subscribers = pub_sub().broadcast(event)
+
     Logger.debug("Dispatched #{inspect(event)} to #{inspect(subscribers, limit: :infinity)}")
 
     {event, subscribers}
+  end
+
+  def insert_with_adapter(event, adapter) do
+    {:ok, %{id: id, aggregate_version: aggregate_version, inserted_at: inserted_at}} =
+      event
+      |> event.__struct__.changeset()
+      |> then(&adapter.insert(&1))
+
+    %{
+      event
+      | id: id,
+        aggregate_version: aggregate_version,
+        inserted_at: inserted_at,
+        from: self()
+    }
   end
 
   @doc """
@@ -116,25 +133,32 @@ defmodule EventStore do
   end
 
   defp handle_stream(stream) do
-    Stream.map(stream, fn event ->
-      module = Module.safe_concat(@namespace, event.name)
-
-      module
-      |> struct!(%{
-        aggregate_id: event.aggregate_id,
-        aggregate_version: event.aggregate_version,
-        inserted_at: event.inserted_at
-      })
-      |> then(&module.cast_payload(&1, event.payload))
-      |> Ecto.Changeset.apply_changes()
-      |> tap(&Logger.debug("Event #{event.name} loaded: #{inspect(&1)}"))
+    Stream.map(stream, fn record ->
+      record
+      |> cast()
+      |> tap(&Logger.debug("Event #{record.name} loaded: #{inspect(&1)}"))
     end)
   end
+
+  def cast(record) do
+    module = Module.safe_concat(namespace(), record.name)
+
+    module
+    |> struct!(%{
+      aggregate_id: record.aggregate_id,
+      aggregate_version: record.aggregate_version,
+      inserted_at: record.inserted_at
+    })
+    |> then(&module.cast_payload(&1, record.payload))
+    |> Ecto.Changeset.apply_changes()
+  end
+
+  def to_name(event) when is_struct(event), do: to_name(event.__struct__)
 
   def to_name(event) when is_atom(event) do
     event
     |> Atom.to_string()
-    |> String.replace_prefix("#{@namespace}.", "")
+    |> String.replace_prefix("#{namespace()}.", "")
   end
 
   def to_event(nil), do: nil
@@ -142,11 +166,4 @@ defmodule EventStore do
   def to_event(%Event{name: name} = event) do
     %{event | __struct__: Module.safe_concat(@namespace, name)}
   end
-
-  @doc """
-  Returns the configured adapter for the EventStore.
-  """
-  def adapter(), do: @adapter
-
-  def pub_sub(), do: EventStore.PubSub.Registry
 end

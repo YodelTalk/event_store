@@ -28,7 +28,7 @@ defmodule EventStore.PubSub.Postgres do
       "NOTIFY #{@channel}, '#{event.id}:#{EventStore.to_name(event)}'"
     )
 
-    # Always return an empty list because there is currently no way to get
+    # Return an empty list because there is currently no way to get
     # the list of subscribers.
     []
   end

@@ -1,5 +1,5 @@
 defmodule EventStore.PubSub.PostgresTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case
 
   alias EventStore.PubSub.Postgres
   alias EventStore.{UserCreated, UserUpdated}
@@ -56,7 +56,8 @@ defmodule EventStore.PubSub.PostgresTest do
     EventStore.Adapters.Postgres.Repo.delete_all(EventStore.Event)
 
     assert is_list(Postgres.broadcast(user_created))
-    # Ensure the pub_sub process is not restarted
+
+    # Ensure the pub_sub process is not restarted.
     refute_receive {:DOWN, ^ref, _, _, _}
   end
 end

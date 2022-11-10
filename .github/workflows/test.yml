@@ -39,6 +39,8 @@ jobs:
             otp: 25.x
           - elixir: 1.14
             otp: 22.x
+          - adapter: InMemory
+            pub_sub: Postgres
 
     steps:
       - uses: actions/checkout@v2

@@ -12,7 +12,7 @@ defmodule EventStore.Application do
     Supervisor.start_link(children, opts)
   end
 
-  defp children(EventStore.Adapters.InMemory, _) do
+  defp children(EventStore.Adapters.InMemory, EventStore.PubSub.Registry) do
     [EventStore.Adapters.InMemory]
   end
 
@@ -28,5 +28,9 @@ defmodule EventStore.Application do
       {Postgrex.Notifications, repo_config ++ [name: EventStore.PubSub.Postgres.Notifications]},
       EventStore.PubSub.Postgres
     ]
+  end
+
+  defp children(adapter, pub_sub) do
+    raise "Running event_store with both #{adapter} and #{pub_sub} makes no sense, please update your config"
   end
 end

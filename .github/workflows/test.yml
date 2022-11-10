@@ -30,6 +30,7 @@ jobs:
       fail-fast: true
       matrix:
         adapter: [InMemory, Postgres]
+        pub_sub: [Registry, Postgres]
         elixir: [1.12, 1.13, 1.14]
         otp: [22.x, 23.x, 24.x, 25.x]
         # https://hexdocs.pm/elixir/1.14.0/compatibility-and-deprecations.html#compatibility-between-elixir-and-erlang-otp
@@ -54,3 +55,4 @@ jobs:
       - run: mix do compile --force, test --warnings-as-errors
         env:
           EVENT_STORE_ADAPTER: Elixir.EventStore.Adapters.${{matrix.adapter}}
+          EVENT_STORE_PUB_SUB: Elixir.EventStore.PubSub.${{matrix.pub_sub}}

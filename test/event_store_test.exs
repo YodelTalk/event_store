@@ -196,6 +196,12 @@ defmodule EventStoreTest do
       end)
     end
 
+    test "only accepts either an event name or an UUID" do
+      assert_raise FunctionClauseError, fn ->
+        EventStore.stream("DefinitelyNotAnUUID")
+      end
+    end
+
     test "returns only events after certain time" do
       EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
 

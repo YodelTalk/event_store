@@ -69,7 +69,21 @@ defmodule EventStore do
 
   def subscribe(event), do: subscribe([event])
 
-  def stream(aggregate_id_or_name, timestamp \\ NaiveDateTime.new!(2000, 1, 1, 0, 0, 0)) do
+  def stream(aggregate_id_or_name, timestamp \\ NaiveDateTime.new!(2000, 1, 1, 0, 0, 0))
+
+  def stream(
+        <<_::binary-size(8), "-", _::binary-size(4), "-", _::binary-size(4), "-",
+          _::binary-size(4), "-", _::binary-size(12)>> = aggregate_id_or_name,
+        timestamp
+      ) do
+    do_stream(aggregate_id_or_name, timestamp)
+  end
+
+  def stream(aggregate_id_or_name, timestamp) when is_atom(aggregate_id_or_name) do
+    do_stream(aggregate_id_or_name, timestamp)
+  end
+
+  defp do_stream(aggregate_id_or_name, timestamp) do
     aggregate_id_or_name
     |> @adapter.stream(timestamp)
     |> Stream.map(fn event ->

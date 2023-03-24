@@ -5,5 +5,8 @@ defmodule EventStore.Adapter do
 
   @callback insert(Ecto.Changeset.t()) :: {:ok, %EventStore.Event{}}
   @callback stream(aggregate_id() | name(), inserted_at()) :: [%EventStore.Event{}]
+
   @callback exists?(aggregate_id(), name()) :: boolean()
+  @callback first(aggregate_id(), name()) :: %EventStore.Event{} | nil
+  @callback last(aggregate_id(), name()) :: %EventStore.Event{} | nil
 end

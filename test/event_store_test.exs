@@ -220,13 +220,36 @@ defmodule EventStoreTest do
     end
   end
 
-  test "exists?/1 checks whether the given event with the specified aggregate_id exists" do
+  test "exists?/2 checks whether an event of the specified type and aggregate_id exists" do
     aggregate_id = Ecto.UUID.generate()
-
     refute EventStore.exists?(aggregate_id, UserCreated)
 
     EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, payload: @data})
     assert EventStore.exists?(aggregate_id, UserCreated)
+  end
+
+  test "first/2 returns the first event of the specified type and aggregate_id" do
+    aggregate_id = Ecto.UUID.generate()
+    refute EventStore.first(aggregate_id, UserCreated)
+
+    EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, payload: @data})
+    EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
+    EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
+
+    assert %UserCreated{aggregate_version: 1} = EventStore.first(aggregate_id, UserCreated)
+    assert %UserUpdated{aggregate_version: 2} = EventStore.first(aggregate_id, UserUpdated)
+  end
+
+  test "last/2 returns the last event of the specified type and aggregate_id" do
+    aggregate_id = Ecto.UUID.generate()
+    refute EventStore.last(aggregate_id, UserCreated)
+
+    EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, payload: @data})
+    EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
+    EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
+
+    assert %UserCreated{aggregate_version: 1} = EventStore.last(aggregate_id, UserCreated)
+    assert %UserUpdated{aggregate_version: 3} = EventStore.last(aggregate_id, UserUpdated)
   end
 
   test "supports mocking of NaiveDateTime.utc_now/1" do

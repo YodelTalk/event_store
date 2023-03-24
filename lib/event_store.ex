@@ -1,12 +1,14 @@
 defmodule EventStore do
   require Logger
-  alias EventStore.{AcknowledgementError, PubSub}
+  alias EventStore.{AcknowledgementError, Event, PubSub}
 
   @adapter Application.compile_env(:event_store, :adapter, EventStore.Adapters.InMemory)
   @namespace Application.compile_env(:event_store, :namespace, __MODULE__)
   @sync_timeout Application.compile_env(:event_store, :sync_timeout, 5000)
 
   defdelegate exists?(aggregate_id, name), to: @adapter
+  defdelegate first(aggregate_id, name), to: @adapter
+  defdelegate last(aggregate_id, name), to: @adapter
 
   @spec dispatch(%EventStore.Event{}) :: {:ok, %EventStore.Event{}}
   def dispatch(event) do
@@ -90,7 +92,7 @@ defmodule EventStore do
       module = Module.safe_concat(@namespace, event.name)
 
       module
-      |> struct(%{
+      |> struct!(%{
         aggregate_id: event.aggregate_id,
         aggregate_version: event.aggregate_version,
         inserted_at: event.inserted_at
@@ -105,6 +107,12 @@ defmodule EventStore do
     event
     |> Atom.to_string()
     |> String.replace_prefix("#{@namespace}.", "")
+  end
+
+  def to_event(nil), do: nil
+
+  def to_event(%Event{name: name} = event) do
+    %{event | __struct__: Module.safe_concat(@namespace, name)}
   end
 
   def adapter(), do: @adapter

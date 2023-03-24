@@ -57,4 +57,23 @@ defmodule EventStore.Adapters.InMemory do
     Agent.get(__MODULE__, & &1)
     |> Enum.any?(&(&1.aggregate_id == aggregate_id and &1.name == name))
   end
+
+  @impl true
+  def first(aggregate_id, event) do
+    name = EventStore.to_name(event)
+
+    Agent.get(__MODULE__, & &1)
+    |> Enum.reverse()
+    |> Enum.find(&(&1.aggregate_id == aggregate_id and &1.name == name))
+    |> EventStore.to_event()
+  end
+
+  @impl true
+  def last(aggregate_id, event) do
+    name = EventStore.to_name(event)
+
+    Agent.get(__MODULE__, & &1)
+    |> Enum.find(&(&1.aggregate_id == aggregate_id and &1.name == name))
+    |> EventStore.to_event()
+  end
 end

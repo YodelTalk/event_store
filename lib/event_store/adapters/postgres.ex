@@ -74,4 +74,30 @@ defmodule EventStore.Adapters.Postgres do
     from(e in Event, where: e.aggregate_id == ^aggregate_id and e.name == ^name)
     |> Repo.exists?()
   end
+
+  @impl true
+  def first(aggregate_id, event) do
+    name = EventStore.to_name(event)
+
+    from(e in Event,
+      where: e.aggregate_id == ^aggregate_id and e.name == ^name,
+      order_by: [asc: :aggregate_version],
+      limit: 1
+    )
+    |> Repo.one()
+    |> EventStore.to_event()
+  end
+
+  @impl true
+  def last(aggregate_id, event) do
+    name = EventStore.to_name(event)
+
+    from(e in Event,
+      where: e.aggregate_id == ^aggregate_id and e.name == ^name,
+      order_by: [desc: :aggregate_version],
+      limit: 1
+    )
+    |> Repo.one()
+    |> EventStore.to_event()
+  end
 end

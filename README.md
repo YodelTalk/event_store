@@ -1,21 +1,53 @@
-# EventStore
+# event_store
 
-**TODO: Add description**
+ChatGPT's perspective why event sourcing rocks:
+
+> An event-sourced app written in Elixir leverages the language's inherent concurrency and fault-tolerance features to handle high-throughput event streams, while projections allow for flexible and efficient querying of this event data, enabling robust and scalable systems.
+>
+
+This library represents our take on an event store. Used in production for multiple apps in the wild.
 
 ## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `event_store` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:event_store, "~> 0.1.0"}
+    {:event_store, github: "YodelTalk/event_store"}
   ]
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/event_store](https://hexdocs.pm/event_store).
+## Troubleshooting common errors
 
+* When encountering the `(RuntimeError) cannot reduce stream outside of transaction` error, even though `EventStore.stream/2` is correctly placed inside a `Repo.transaction/1` call, it is important to verify that the correct `Ecto.Repo` is being referenced:
+
+  The following example will lead to the aforementioned error:
+
+  ```elixir
+  alias MyApp.Repo
+
+  last_update = Repo.one(from(model in Model, select: max(model.inserted_at))) ||
+    NaiveDateTime.new!(2000, 1, 1, 0, 0, 0)
+
+  Repo.transaction(fn ->
+    EventStore.stream(MyApp.SomeEvent, last_update)
+  end)
+  ```
+
+  Contrastingly, this example makes use of the appropriate `Ecto.Repo` and will not result in an error:
+
+  ```elixir
+  alias MyApp.Repo
+  alias EventStore.Adapters.Postgres.Repo, as: EventStoreRepo
+
+  last_update = Repo.one(from(model in Model, select: max(model.inserted_at))) ||
+    NaiveDateTime.new!(2000, 1, 1, 0, 0, 0)
+
+  EventStoreRepo.transaction(fn ->
+    EventStore.stream(MyApp.SomeEvent, last_update)
+  end)
+  ```
+
+## License
+
+[MIT License](LICENSE)

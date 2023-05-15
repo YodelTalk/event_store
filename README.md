@@ -1,4 +1,4 @@
-# event_store
+# event_store [![CI](https://github.com/YodelTalk/event_store/actions/workflows/test.yml/badge.svg)](https://github.com/YodelTalk/event_store/actions/workflows/test.yml)
 
 ChatGPT's perspective why event sourcing rocks:
 

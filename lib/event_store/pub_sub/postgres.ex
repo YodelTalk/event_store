@@ -2,9 +2,10 @@ defmodule EventStore.PubSub.Postgres do
   @behaviour EventStore.PubSub
 
   use GenServer
+  require Logger
 
-  alias Postgrex.Notifications
   alias EventStore.Adapters.Postgres.Repo
+  alias Postgrex.Notifications
 
   @channel "events"
 
@@ -23,10 +24,10 @@ defmodule EventStore.PubSub.Postgres do
 
   @impl true
   def broadcast(event) when is_struct(event) do
-    Ecto.Adapters.SQL.query!(
-      Repo,
-      "NOTIFY #{@channel}, '#{event.id}:#{EventStore.to_name(event)}'"
-    )
+    payload = "#{event.id}:#{EventStore.to_name(event)}"
+
+    Ecto.Adapters.SQL.query!(Repo, "NOTIFY #{@channel}, '#{payload}'")
+    Logger.debug("Send #{inspect(payload)} on channel #{@channel}")
 
     # Return an empty list because there is currently no way to get
     # the list of subscribers.
@@ -48,9 +49,12 @@ defmodule EventStore.PubSub.Postgres do
 
   @impl true
   def handle_info(
-        {:notification, _pid, _ref, @channel, <<id::binary-size(36), ":", topic::binary>>},
+        {:notification, _pid, _ref, @channel,
+         <<id::binary-size(36), ":", topic::binary>> = payload},
         topics
       ) do
+    Logger.debug("Received #{inspect(payload)} on channel #{@channel}")
+
     if topic in topics do
       EventStore.Event
       |> Repo.get!(id)

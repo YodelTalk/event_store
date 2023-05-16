@@ -1,9 +1,23 @@
 defmodule EventStoreTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
   alias EventStore.{UserCreated, UserUpdated}
 
   @unix_time ~N[1970-01-01 00:00:00.000000]
   @data %{"some" => "data"}
+
+  setup_all do
+    case EventStore.adapter() do
+      EventStore.Adapters.InMemory ->
+        start_supervised!(EventStore.PubSub.Registry)
+        start_supervised!(EventStore.Adapters.InMemory)
+
+      EventStore.Adapters.Postgres ->
+        start_supervised!(EventStore.PubSub.Registry)
+        start_supervised!(EventStore.Adapters.Postgres.Repo)
+    end
+
+    :ok
+  end
 
   setup do
     start_supervised!(MockNaiveDateTime)

@@ -1,27 +1,35 @@
 defmodule EventStore.PubSub.PostgresTest do
   use ExUnit.Case
-
-  alias EventStore.PubSub.Postgres
-  alias EventStore.{UserCreated, UserUpdated}
-
   import SpawnSubscriber
+
+  alias EventStore.PubSub.{Postgres, Registry}
+  alias EventStore.{UserCreated, UserUpdated}
 
   @user_created %UserCreated{
     aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
     payload: %{"some" => "data"}
   }
 
+  @user_updated %UserUpdated{
+    aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
+    payload: %{"some" => "data"}
+  }
+
+  setup_all do
+    start_supervised!(EventStore.Adapters.Postgres.Repo)
+
+    start_supervised!(
+      {Postgrex.Notifications,
+       EventStore.Adapters.Postgres.Repo.config() ++
+         [name: EventStore.PubSub.Postgres.Notifications]}
+    )
+
+    :ok
+  end
+
   setup do
-    repo_config = EventStore.Adapters.Postgres.Repo.config()
-
-    for app <- [
-          EventStore.Adapters.Postgres.Repo,
-          {Postgrex.Notifications,
-           repo_config ++ [name: EventStore.PubSub.Postgres.Notifications]},
-          EventStore.PubSub.Postgres
-        ],
-        do: start_supervised(app)
-
+    start_supervised!(Registry)
+    start_supervised!(Postgres)
     :ok
   end
 
@@ -48,16 +56,18 @@ defmodule EventStore.PubSub.PostgresTest do
 
   test "broadcast/1 does not load unnecessary events" do
     ref = Process.monitor(Postgres)
-    Postgres.subscribe(UserUpdated)
+    Postgres.subscribe(UserCreated)
 
-    user_created = EventStore.insert_with_adapter(@user_created, EventStore.Adapters.Postgres)
-    # Deleting all events should result in the event not being fetchable again,
-    # which anyways should not happen.
+    user_created = EventStore.insert_with_adapter(@user_updated, EventStore.Adapters.Postgres)
+
+    # If deleted directly from the DB, an Ecto.NoResultsError should crash the
+    # PubSub process when accessing the event. However, since the process
+    # only subscribed to UserCreated events, this situation should not occur.
     EventStore.Adapters.Postgres.Repo.delete_all(EventStore.Event)
 
     assert is_list(Postgres.broadcast(user_created))
 
-    # Ensure the pub_sub process is not restarted.
+    # Ensure that the PubSub process did not crash.
     refute_receive {:DOWN, ^ref, _, _, _}
   end
 end

@@ -1,7 +1,5 @@
 import Config
 
-config :logger, level: :info
-
 config :event_store,
   adapter: EventStore.Adapters.Postgres,
   ecto_repos: [EventStore.Adapters.Postgres.Repo]

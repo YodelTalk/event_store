@@ -51,7 +51,8 @@ defmodule EventStore.MixProject do
   defp aliases do
     [
       setup: ["deps.get", "ecto.setup"],
-      "ecto.setup": ["ecto.create", "ecto.migrate"]
+      "ecto.setup": ["ecto.create", "ecto.migrate"],
+      test: "test --no-start"
     ]
   end
 end

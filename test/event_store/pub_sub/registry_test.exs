@@ -1,15 +1,19 @@
 defmodule EventStore.PubSub.RegistryTest do
   use ExUnit.Case
+  import SpawnSubscriber
 
   alias EventStore.PubSub.Registry
   alias EventStore.{UserCreated, UserUpdated}
-
-  import SpawnSubscriber
 
   @user_created %UserCreated{
     aggregate_id: "01234567-89ab-cdef-0123-456789abcdef",
     payload: %{"some" => "data"}
   }
+
+  setup do
+    start_supervised!(EventStore.PubSub.Registry)
+    :ok
+  end
 
   test "subscribe/1" do
     assert Registry.subscribe(UserCreated)

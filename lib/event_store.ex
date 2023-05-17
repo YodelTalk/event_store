@@ -10,14 +10,14 @@ defmodule EventStore do
   @namespace Application.compile_env(:event_store, :namespace, __MODULE__)
   @sync_timeout Application.compile_env(:event_store, :sync_timeout, 5000)
 
-  def namespace(), do: @namespace
+  def namespace, do: @namespace
 
   @adapter Application.compile_env(:event_store, :adapter, EventStore.Adapters.InMemory)
 
   @doc """
   Returns the configured adapter for the EventStore.
   """
-  def adapter(), do: @adapter
+  def adapter, do: @adapter
 
   @doc """
   Checks if an event with a specific aggregate ID and name exists.
@@ -36,7 +36,7 @@ defmodule EventStore do
 
   @pub_sub Application.compile_env(:event_store, :pub_sub, EventStore.PubSub.Registry)
 
-  def pub_sub(), do: @pub_sub
+  def pub_sub, do: @pub_sub
 
   @doc """
   Dispatches an event to the EventStore.
@@ -158,7 +158,11 @@ defmodule EventStore do
   def to_name(event) when is_atom(event) do
     event
     |> Atom.to_string()
-    |> String.replace_prefix("#{namespace()}.", "")
+    |> to_name()
+  end
+
+  def to_name(event) when is_binary(event) do
+    String.replace_prefix(event, "#{namespace()}.", "")
   end
 
   def to_event(nil), do: nil

@@ -55,7 +55,7 @@ defmodule EventStore.PubSub.Postgres do
       ) do
     Logger.debug("Received #{inspect(payload)} on channel #{@channel}")
 
-    if topic in topics do
+    if EventStore.to_name(topic) in topics do
       EventStore.Event
       |> Repo.get!(id)
       |> EventStore.cast()

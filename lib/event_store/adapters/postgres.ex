@@ -56,7 +56,8 @@ defmodule EventStore.Adapters.Postgres do
     end
   end
 
-  defp next_aggregate_version(%{aggregate_id: aggregate_id} = _event) do
+  defp next_aggregate_version(%{aggregate_id: aggregate_id} = _event)
+       when not is_nil(aggregate_id) do
     Event
     |> by_aggregate_id(aggregate_id)
     |> select([e], %{aggregate_version: coalesce(max(e.aggregate_version) + 1, 1)})

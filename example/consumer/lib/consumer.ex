@@ -1,0 +1,2 @@
+defmodule Consumer do
+end

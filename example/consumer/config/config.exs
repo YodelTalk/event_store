@@ -15,5 +15,3 @@ config :event_store, EventStore.Adapters.Postgres.Repo,
   hostname: System.get_env("POSTGRES_HOST", "localhost"),
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
-
-config :logger, level: :debug

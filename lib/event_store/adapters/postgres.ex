@@ -1,4 +1,16 @@
 defmodule EventStore.Adapters.Postgres do
+  @moduledoc """
+  An EventStore adapter for using a PostgreSQL database.
+
+  This adapter provides implementations for storing and retrieving events in a
+  PostgreSQL database using Ecto. It supports storing events with metadata such
+  as aggregate identifiers, versions, and timestamps. Streaming of events is
+  also supported, with optional filtering by aggregate ID or timestamp.
+
+  Note that the events are stored in a denormalized format to optimize for
+  append-only and read-heavy use cases typical in event sourcing.
+  """
+
   @behaviour EventStore.Adapter
 
   import Ecto.Query

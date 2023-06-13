@@ -1,6 +1,7 @@
 defmodule EventStore.Guards do
   @moduledoc """
-  A collection of guard functions for various validations, including UUID strings.
+  A collection of guard functions for various validations, including UUID
+  strings.
   """
 
   defguard is_uuid(value)

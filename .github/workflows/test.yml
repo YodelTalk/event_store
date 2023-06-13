@@ -51,6 +51,6 @@ jobs:
       - run: mix do deps.get, deps.unlock --check-unused, deps.compile
       - run: mix ecto.setup
       - run: mix compile --warnings-as-errors
-      - run: mix do compile --force, test
+      - run: mix do compile --force, test --warnings-as-errors
         env:
           EVENT_STORE_ADAPTER: Elixir.EventStore.Adapters.${{matrix.adapter}}

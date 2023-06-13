@@ -1,4 +1,5 @@
 defmodule EventStore.PubSub do
+  @moduledoc false
   def child_spec(_opts) do
     %{
       id: __MODULE__,

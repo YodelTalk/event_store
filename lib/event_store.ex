@@ -1,6 +1,42 @@
 defmodule EventStore do
   @moduledoc """
   A central store for managing and dispatching domain events.
+
+  EventStore is a core component for an event sourcing architecture, providing
+  functionalities to store, dispatch, and query events. It is designed to be
+  highly extensible with support for pluggable adapters.
+
+  ## Key Features
+
+  - **Dispatching Events:** Events can be dispatched to the store and
+    optionally, the dispatch process can be synchronous to ensure that
+    subscribers have acknowledged receipt.
+
+  - **Subscribing to Events:** Processes can subscribe to specific events,
+    allowing them to receive notifications when these events occur.
+
+  - **Querying Events:** It provides facilities to check the existence of
+    specific events and to retrieve the first or last event for specific
+    criteria.
+
+  - **Streaming Events:** Supports streaming events from the store which can be
+    used in projections and other read models.
+
+  - **Pluggable Adapters:** EventStore can be configured with different storage
+    adapters (e.g., in-memory, PostgreSQL) which allows for flexibility in storage
+    backends.
+
+  ## Configuration
+
+  - `:adapter` - Specifies the adapter to be used for the event store. Defaults
+    to `EventStore.Adapters.Postgres`.
+
+  - `:namespace` - Defines the namespace for the events.
+
+  - `:pubsub` - Specifies the PubSub adapter to be used for the event store. Defaults
+    to `EventStore.Adapters.PubSub.Registry`.
+
+  - `:sync_timeout` - Specifies the timeout for synchronous dispatches.
   """
 
   require Logger
@@ -10,9 +46,12 @@ defmodule EventStore do
   @namespace Application.compile_env(:event_store, :namespace, __MODULE__)
   @sync_timeout Application.compile_env(:event_store, :sync_timeout, 5000)
 
+  @doc """
+  Returns the configured namespace for the events.
+  """
   def namespace, do: @namespace
 
-  @adapter Application.compile_env(:event_store, :adapter, EventStore.Adapters.InMemory)
+  @adapter Application.compile_env(:event_store, :adapter, EventStore.Adapters.Postgres)
 
   @doc """
   Returns the configured adapter for the EventStore.
@@ -36,6 +75,9 @@ defmodule EventStore do
 
   @pub_sub Application.compile_env(:event_store, :pub_sub, EventStore.PubSub.Registry)
 
+  @doc """
+  Returns the configured PubSub adapter for the EventStore.
+  """
   def pub_sub, do: @pub_sub
 
   @doc """
@@ -81,6 +123,8 @@ defmodule EventStore do
     {event, subscribers}
   end
 
+  @doc false
+  @spec insert_with_adapter(EventStore.Event.t(), module()) :: EventStore.Event.t()
   def insert_with_adapter(event, adapter) do
     {:ok, %{id: id, aggregate_version: aggregate_version, inserted_at: inserted_at}} =
       event
@@ -107,8 +151,9 @@ defmodule EventStore do
   end
 
   @doc """
-  Subscribes to one or more events.
+  Subscribes the calling process to one or more events.
   """
+  @spec subscribe(module() | list(module())) :: any()
   def subscribe(event) when is_atom(event), do: subscribe([event])
 
   def subscribe(events) when is_list(events) do
@@ -140,6 +185,15 @@ defmodule EventStore do
     end)
   end
 
+  @doc """
+  Casts a raw record from the store into a structured event.
+
+  This function takes a raw record, resolves the appropriate module based on the
+  event name, and casts it into an event struct, including applying the payload.
+
+  This is an internal function and should not be called directly.
+  """
+  @spec cast(map()) :: any()
   def cast(record) do
     module = Module.safe_concat(namespace(), record.name)
 
@@ -153,6 +207,7 @@ defmodule EventStore do
     |> Ecto.Changeset.apply_changes()
   end
 
+  @doc false
   def to_name(event) when is_struct(event), do: to_name(event.__struct__)
 
   def to_name(event) when is_atom(event) do
@@ -165,6 +220,7 @@ defmodule EventStore do
     String.replace_prefix(event, "#{namespace()}.", "")
   end
 
+  @doc false
   def to_event(nil), do: nil
 
   def to_event(%Event{name: name} = event) do

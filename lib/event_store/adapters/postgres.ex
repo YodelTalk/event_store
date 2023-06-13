@@ -7,6 +7,7 @@ defmodule EventStore.Adapters.Postgres do
   alias EventStore.Event
 
   defmodule Repo do
+    @moduledoc false
     use Ecto.Repo, otp_app: :event_store, adapter: Ecto.Adapters.Postgres
   end
 

@@ -9,7 +9,11 @@ defmodule EventStore.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      aliases: aliases()
+      aliases: aliases(),
+
+      # Docs
+      source_url: "https://github.com/yodeltalk/event_store",
+      docs: []
     ]
   end
 
@@ -33,7 +37,8 @@ defmodule EventStore.MixProject do
       {:postgrex, ">= 0.0.0"},
 
       # Only dev
-      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.27", only: :dev, runtime: false}
     ]
   end
 

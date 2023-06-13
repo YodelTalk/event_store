@@ -1,4 +1,8 @@
 defmodule EventStore.Event do
+  @moduledoc """
+  Defines the schema and behaviour for storing and handling events in the EventStore.
+  """
+
   use Ecto.Schema
   import Ecto.Changeset
 

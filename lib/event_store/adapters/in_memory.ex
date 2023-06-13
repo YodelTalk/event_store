@@ -1,8 +1,14 @@
 defmodule EventStore.Adapters.InMemory do
   @moduledoc """
-  **Don't use this adapter in production!** Its currently not optimized at all. It's
-  main purpose is for testing and to demonstrate how easy you can build your own
-  adapter.
+  An in-memory event store adapter.
+
+  > #### Avoid using this adapter in production! {: .error}
+  >
+  > This adapter is not optimized and is intended solely for testing and
+  > demonstration purposes. Be aware that:
+  > - It should NOT be used in production.
+  > - Restarting the application will result in the LOSS of ALL previously
+  >   stored events.
   """
 
   @behaviour EventStore.Adapter

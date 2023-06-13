@@ -2,6 +2,7 @@ defmodule EventStore.Application do
   @moduledoc false
   use Application
 
+  @doc false
   @impl true
   def start(_type, _args) do
     children = [EventStore.PubSub] ++ extra_children(EventStore.adapter())

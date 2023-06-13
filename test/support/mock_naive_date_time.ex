@@ -1,4 +1,5 @@
 defmodule MockNaiveDateTime do
+  @moduledoc false
   use Agent
 
   def start_link(_) do

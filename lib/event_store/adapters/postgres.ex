@@ -45,83 +45,82 @@ defmodule EventStore.Adapters.Postgres do
   end
 
   defp next_aggregate_version(%{aggregate_id: aggregate_id} = _event) do
-    from(e in Event,
-      where: e.aggregate_id == ^aggregate_id,
-      select: %{aggregate_version: coalesce(max(e.aggregate_version) + 1, 1)}
-    )
+    Event
+    |> by_aggregate_id(aggregate_id)
+    |> select([e], %{aggregate_version: coalesce(max(e.aggregate_version) + 1, 1)})
+  end
+
+  defp by_aggregate_id(query, aggregate_id) do
+    where(query, aggregate_id: ^aggregate_id)
+  end
+
+  defp by_event_name(query, event) when is_atom(event) do
+    where(query, name: ^EventStore.to_name(event))
+  end
+
+  defp inserted_after(query, timestamp) do
+    where(query, [e], e.inserted_at >= ^timestamp)
   end
 
   @impl true
   def stream(aggregate_id) when is_uuid(aggregate_id) do
-    from(e in Event,
-      where: e.aggregate_id == ^aggregate_id,
-      order_by: :inserted_at
-    )
+    Event
+    |> by_aggregate_id(aggregate_id)
+    |> order_by(:inserted_at)
     |> Repo.stream()
   end
 
   @impl true
   def stream(event) when is_atom(event) do
-    name = EventStore.to_name(event)
-
-    from(e in Event,
-      where: e.name == ^name,
-      order_by: :inserted_at
-    )
+    Event
+    |> by_event_name(event)
+    |> order_by(:inserted_at)
     |> Repo.stream()
   end
 
   @impl true
   def stream(aggregate_id, timestamp) when is_uuid(aggregate_id) do
-    from(e in Event,
-      where: e.aggregate_id == ^aggregate_id and e.inserted_at >= ^timestamp,
-      order_by: :inserted_at
-    )
+    Event
+    |> by_aggregate_id(aggregate_id)
+    |> inserted_after(timestamp)
+    |> order_by(:inserted_at)
     |> Repo.stream()
   end
 
   def stream(event, timestamp) when is_atom(event) do
-    name = EventStore.to_name(event)
-
-    from(e in Event,
-      where: e.name == ^name and e.inserted_at >= ^timestamp,
-      order_by: :inserted_at
-    )
+    Event
+    |> by_event_name(event)
+    |> inserted_after(timestamp)
+    |> order_by(:inserted_at)
     |> Repo.stream()
   end
 
   @impl true
   def exists?(aggregate_id, event) when is_atom(event) do
-    name = EventStore.to_name(event)
-
-    from(e in Event,
-      where: e.aggregate_id == ^aggregate_id and e.name == ^name
-    )
+    Event
+    |> by_aggregate_id(aggregate_id)
+    |> by_event_name(event)
     |> Repo.exists?()
   end
 
   @impl true
   def first(aggregate_id, event) do
-    name = EventStore.to_name(event)
-
-    from(e in Event,
-      where: e.aggregate_id == ^aggregate_id and e.name == ^name,
-      order_by: [asc: :aggregate_version],
-      limit: 1
-    )
+    Event
+    |> by_aggregate_id(aggregate_id)
+    |> by_event_name(event)
+    |> order_by(asc: :aggregate_version)
+    |> limit(1)
     |> Repo.one()
     |> EventStore.to_event()
   end
 
   @impl true
   def last(aggregate_id, event) do
-    name = EventStore.to_name(event)
-
-    from(e in Event,
-      where: e.aggregate_id == ^aggregate_id and e.name == ^name,
-      order_by: [desc: :aggregate_version],
-      limit: 1
-    )
+    Event
+    |> by_aggregate_id(aggregate_id)
+    |> by_event_name(event)
+    |> order_by(desc: :aggregate_version)
+    |> limit(1)
     |> Repo.one()
     |> EventStore.to_event()
   end

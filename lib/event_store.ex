@@ -1,5 +1,6 @@
 defmodule EventStore do
   require Logger
+  import EventStore.Guards
   alias EventStore.{AcknowledgementError, Event, PubSub}
 
   @adapter Application.compile_env(:event_store, :adapter, EventStore.Adapters.InMemory)
@@ -71,19 +72,18 @@ defmodule EventStore do
 
   def subscribe(event), do: subscribe([event])
 
-  defguardp is_uuid(value)
-            when is_binary(value) and
-                   byte_size(value) == 36 and
-                   binary_part(value, 8, 1) == "-" and
-                   binary_part(value, 13, 1) == "-" and
-                   binary_part(value, 18, 1) == "-" and
-                   binary_part(value, 23, 1) == "-"
-
-  def stream(aggregate_id_or_name, timestamp \\ NaiveDateTime.new!(2000, 1, 1, 0, 0, 0))
+  def stream(aggregate_id_or_name)
       when is_uuid(aggregate_id_or_name) or is_atom(aggregate_id_or_name) do
-    aggregate_id_or_name
-    |> @adapter.stream(timestamp)
-    |> Stream.map(fn event ->
+    handle_stream(@adapter.stream(aggregate_id_or_name))
+  end
+
+  def stream(aggregate_id_or_name, timestamp)
+      when is_uuid(aggregate_id_or_name) or is_atom(aggregate_id_or_name) do
+    handle_stream(@adapter.stream(aggregate_id_or_name, timestamp))
+  end
+
+  defp handle_stream(stream) do
+    Stream.map(stream, fn event ->
       module = Module.safe_concat(@namespace, event.name)
 
       module

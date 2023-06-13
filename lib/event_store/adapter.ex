@@ -4,6 +4,8 @@ defmodule EventStore.Adapter do
   @type inserted_at :: NaiNaiveDateTime.t()
 
   @callback insert(Ecto.Changeset.t()) :: {:ok, %EventStore.Event{}}
+
+  @callback stream(aggregate_id() | name()) :: [%EventStore.Event{}]
   @callback stream(aggregate_id() | name(), inserted_at()) :: [%EventStore.Event{}]
 
   @callback exists?(aggregate_id(), name()) :: boolean()

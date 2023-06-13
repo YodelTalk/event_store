@@ -16,7 +16,7 @@ defmodule MockNaiveDateTime do
     Agent.update(__MODULE__, fn _ -> datetime end)
   end
 
-  def unset() do
+  def reset() do
     set(nil)
   end
 end

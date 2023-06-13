@@ -2,6 +2,8 @@ defmodule EventStore.Adapters.Postgres do
   @behaviour EventStore.Adapter
 
   import Ecto.Query
+  import EventStore.Guards
+
   alias EventStore.Event
 
   defmodule Repo do
@@ -49,9 +51,29 @@ defmodule EventStore.Adapters.Postgres do
   end
 
   @impl true
-  def stream(aggregate_id, timestamp) when is_binary(aggregate_id) do
+  def stream(aggregate_id) when is_uuid(aggregate_id) do
     from(e in Event,
-      where: e.aggregate_id == ^aggregate_id and e.inserted_at > ^timestamp,
+      where: e.aggregate_id == ^aggregate_id,
+      order_by: :inserted_at
+    )
+    |> Repo.stream()
+  end
+
+  @impl true
+  def stream(event) when is_atom(event) do
+    name = EventStore.to_name(event)
+
+    from(e in Event,
+      where: e.name == ^name,
+      order_by: :inserted_at
+    )
+    |> Repo.stream()
+  end
+
+  @impl true
+  def stream(aggregate_id, timestamp) when is_uuid(aggregate_id) do
+    from(e in Event,
+      where: e.aggregate_id == ^aggregate_id and e.inserted_at >= ^timestamp,
       order_by: :inserted_at
     )
     |> Repo.stream()
@@ -61,7 +83,7 @@ defmodule EventStore.Adapters.Postgres do
     name = EventStore.to_name(event)
 
     from(e in Event,
-      where: e.name == ^name and e.inserted_at > ^timestamp,
+      where: e.name == ^name and e.inserted_at >= ^timestamp,
       order_by: :inserted_at
     )
     |> Repo.stream()
@@ -71,7 +93,9 @@ defmodule EventStore.Adapters.Postgres do
   def exists?(aggregate_id, event) when is_atom(event) do
     name = EventStore.to_name(event)
 
-    from(e in Event, where: e.aggregate_id == ^aggregate_id and e.name == ^name)
+    from(e in Event,
+      where: e.aggregate_id == ^aggregate_id and e.name == ^name
+    )
     |> Repo.exists?()
   end
 

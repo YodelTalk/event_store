@@ -8,6 +8,7 @@ defmodule EventStore.Adapters.InMemory do
   @behaviour EventStore.Adapter
 
   use Agent
+  import EventStore.Guards
 
   def start_link(_) do
     # TODO: Change the internal storage to something more performant than a list.
@@ -35,10 +36,29 @@ defmodule EventStore.Adapters.InMemory do
   end
 
   @impl true
-  def stream(aggregate_id, timestamp) when is_binary(aggregate_id) do
+  def stream(aggregate_id) when is_uuid(aggregate_id) do
     Agent.get(__MODULE__, & &1)
     |> Enum.reverse()
-    |> Stream.filter(&(&1.aggregate_id == aggregate_id && &1.inserted_at > timestamp))
+    |> Stream.filter(&(&1.aggregate_id == aggregate_id))
+  end
+
+  @impl true
+  def stream(event) when is_atom(event) do
+    name = EventStore.to_name(event)
+
+    Agent.get(__MODULE__, & &1)
+    |> Enum.reverse()
+    |> Stream.filter(&(&1.name == name))
+  end
+
+  @impl true
+  def stream(aggregate_id, timestamp) when is_uuid(aggregate_id) do
+    Agent.get(__MODULE__, & &1)
+    |> Enum.reverse()
+    |> Stream.filter(
+      &(&1.aggregate_id == aggregate_id &&
+          NaiveDateTime.compare(&1.inserted_at, timestamp) in [:gt, :eq])
+    )
   end
 
   @impl true
@@ -47,7 +67,9 @@ defmodule EventStore.Adapters.InMemory do
 
     Agent.get(__MODULE__, & &1)
     |> Enum.reverse()
-    |> Stream.filter(&(&1.name == name && &1.inserted_at > timestamp))
+    |> Stream.filter(
+      &(&1.name == name && NaiveDateTime.compare(&1.inserted_at, timestamp) in [:gt, :eq])
+    )
   end
 
   @impl true

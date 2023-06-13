@@ -30,7 +30,10 @@ defmodule EventStore.MixProject do
     [
       {:ecto_sql, "~> 3.6"},
       {:jason, "~> 1.2"},
-      {:postgrex, ">= 0.0.0"}
+      {:postgrex, ">= 0.0.0"},
+
+      # Only dev
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
   end
 

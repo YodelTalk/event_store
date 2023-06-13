@@ -10,13 +10,13 @@ defmodule EventStore do
   defdelegate first(aggregate_id, name), to: @adapter
   defdelegate last(aggregate_id, name), to: @adapter
 
-  @spec dispatch(%EventStore.Event{}) :: {:ok, %EventStore.Event{}}
+  @spec dispatch(EventStore.Event.t()) :: {:ok, EventStore.Event.t()}
   def dispatch(event) do
     {event, _} = dispatch_and_return_subscribers(event)
     {:ok, event}
   end
 
-  @spec sync_dispatch(%EventStore.Event{}) :: {:ok, %EventStore.Event{}}
+  @spec sync_dispatch(EventStore.Event.t()) :: {:ok, EventStore.Event.t()}
   def sync_dispatch(event) do
     {
       %{aggregate_id: aggregate_id, aggregate_version: aggregate_version} = event,
@@ -56,7 +56,7 @@ defmodule EventStore do
     {event, subscribers}
   end
 
-  @spec acknowledge(%EventStore.Event{}) :: :ok
+  @spec acknowledge(EventStore.Event.t()) :: :ok
   def acknowledge(event) do
     Logger.debug("Subscriber #{inspect(self())} acknowledged #{inspect(event)}")
     send(event.from, {self(), event.aggregate_id, event.aggregate_version})

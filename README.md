@@ -1,6 +1,8 @@
 # event_store [![CI](https://github.com/YodelTalk/event_store/actions/workflows/test.yml/badge.svg)](https://github.com/YodelTalk/event_store/actions/workflows/test.yml)
 
-ChatGPT's perspective why event sourcing rocks:
+A central store for managing and dispatching domain events.
+
+ChatGPT's perspective why event storing/sourcing rocks:
 
 > An event-sourced app written in Elixir leverages the language's inherent concurrency and fault-tolerance features to handle high-throughput event streams, while projections allow for flexible and efficient querying of this event data, enabling robust and scalable systems.
 >

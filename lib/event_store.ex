@@ -71,21 +71,16 @@ defmodule EventStore do
 
   def subscribe(event), do: subscribe([event])
 
+  defguardp is_uuid(value)
+            when is_binary(value) and
+                   byte_size(value) == 36 and
+                   binary_part(value, 8, 1) == "-" and
+                   binary_part(value, 13, 1) == "-" and
+                   binary_part(value, 18, 1) == "-" and
+                   binary_part(value, 23, 1) == "-"
+
   def stream(aggregate_id_or_name, timestamp \\ NaiveDateTime.new!(2000, 1, 1, 0, 0, 0))
-
-  def stream(
-        <<_::binary-size(8), "-", _::binary-size(4), "-", _::binary-size(4), "-",
-          _::binary-size(4), "-", _::binary-size(12)>> = aggregate_id_or_name,
-        timestamp
-      ) do
-    do_stream(aggregate_id_or_name, timestamp)
-  end
-
-  def stream(aggregate_id_or_name, timestamp) when is_atom(aggregate_id_or_name) do
-    do_stream(aggregate_id_or_name, timestamp)
-  end
-
-  defp do_stream(aggregate_id_or_name, timestamp) do
+      when is_uuid(aggregate_id_or_name) or is_atom(aggregate_id_or_name) do
     aggregate_id_or_name
     |> @adapter.stream(timestamp)
     |> Stream.map(fn event ->

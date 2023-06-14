@@ -10,7 +10,7 @@ defmodule EventStore.PubSub.Postgres do
   use GenServer
   require Logger
 
-  alias EventStore.Adapters.Postgres.Repo
+  alias EventStore.Adapter.Postgres.Repo
   alias Postgrex.Notifications
 
   @channel "events"

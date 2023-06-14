@@ -29,12 +29,12 @@ defmodule EventStore do
   ## Configuration
 
   - `:adapter` - Specifies the adapter to be used for the event store. Defaults
-    to `EventStore.Adapters.Postgres`.
+    to `EventStore.Adapter.Postgres`.
 
   - `:namespace` - Defines the namespace for the events.
 
   - `:pubsub` - Specifies the PubSub adapter to be used for the event store. Defaults
-    to `EventStore.Adapters.PubSub.Registry`.
+    to `EventStore.Adapter.PubSub.Registry`.
 
   - `:sync_timeout` - Specifies the timeout for synchronous dispatches.
   """
@@ -51,7 +51,7 @@ defmodule EventStore do
   """
   def namespace, do: @namespace
 
-  @adapter Application.compile_env(:event_store, :adapter, EventStore.Adapters.Postgres)
+  @adapter Application.compile_env(:event_store, :adapter, EventStore.Adapter.Postgres)
 
   @doc """
   Returns the configured adapter for the EventStore.

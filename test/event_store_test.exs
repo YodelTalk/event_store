@@ -7,13 +7,13 @@ defmodule EventStoreTest do
 
   setup_all do
     case EventStore.adapter() do
-      EventStore.Adapters.InMemory ->
+      EventStore.Adapter.InMemory ->
         start_supervised!(EventStore.PubSub.Registry)
-        start_supervised!(EventStore.Adapters.InMemory)
+        start_supervised!(EventStore.Adapter.InMemory)
 
-      EventStore.Adapters.Postgres ->
+      EventStore.Adapter.Postgres ->
         start_supervised!(EventStore.PubSub.Registry)
-        start_supervised!(EventStore.Adapters.Postgres.Repo)
+        start_supervised!(EventStore.Adapter.Postgres.Repo)
     end
 
     :ok
@@ -272,8 +272,8 @@ defmodule EventStoreTest do
 
   defp transaction(fun) do
     case EventStore.adapter() do
-      EventStore.Adapters.InMemory -> {:ok, fun.()}
-      EventStore.Adapters.Postgres -> EventStore.Adapters.Postgres.Repo.transaction(fun)
+      EventStore.Adapter.InMemory -> {:ok, fun.()}
+      EventStore.Adapter.Postgres -> EventStore.Adapter.Postgres.Repo.transaction(fun)
     end
   end
 end

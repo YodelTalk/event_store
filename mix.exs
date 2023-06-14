@@ -14,7 +14,12 @@ defmodule EventStore.MixProject do
 
       # Docs
       source_url: "https://github.com/yodeltalk/event_store",
-      docs: []
+      docs: [
+        groups_for_modules: [
+          Stores: ~r/EventStore\.Adapter\./,
+          PubSub: ~r/EventStore\.PubSub\./
+        ]
+      ]
     ]
   end
 

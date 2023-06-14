@@ -1,4 +1,4 @@
-defmodule EventStore.Adapters.Postgres do
+defmodule EventStore.Adapter.Postgres do
   @moduledoc """
   An EventStore adapter for using a PostgreSQL database.
 

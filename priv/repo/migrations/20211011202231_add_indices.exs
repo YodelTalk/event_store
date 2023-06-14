@@ -1,4 +1,4 @@
-defmodule EventStore.Adapters.Postgres.Repo.Migrations.AddIndices do
+defmodule EventStore.Adapter.Postgres.Repo.Migrations.AddIndices do
   use Ecto.Migration
 
   def change do

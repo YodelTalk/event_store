@@ -16,11 +16,11 @@ defmodule EventStore.PubSub.PostgresTest do
   }
 
   setup_all do
-    start_supervised!(EventStore.Adapters.Postgres.Repo)
+    start_supervised!(EventStore.Adapter.Postgres.Repo)
 
     start_supervised!(
       {Postgrex.Notifications,
-       EventStore.Adapters.Postgres.Repo.config() ++
+       EventStore.Adapter.Postgres.Repo.config() ++
          [name: EventStore.PubSub.Postgres.Notifications]}
     )
 
@@ -41,7 +41,7 @@ defmodule EventStore.PubSub.PostgresTest do
     pid1 = spawn_subscriber(Postgres, UserCreated, self())
     pid2 = spawn_subscriber(Postgres, UserUpdated, self())
 
-    user_created = EventStore.insert_with_adapter(@user_created, EventStore.Adapters.Postgres)
+    user_created = EventStore.insert_with_adapter(@user_created, EventStore.Adapter.Postgres)
     assert is_list(Postgres.broadcast(user_created))
 
     user_created = %{
@@ -58,12 +58,12 @@ defmodule EventStore.PubSub.PostgresTest do
     ref = Process.monitor(Postgres)
     Postgres.subscribe(UserCreated)
 
-    user_created = EventStore.insert_with_adapter(@user_updated, EventStore.Adapters.Postgres)
+    user_created = EventStore.insert_with_adapter(@user_updated, EventStore.Adapter.Postgres)
 
     # If deleted directly from the DB, an Ecto.NoResultsError should crash the
     # PubSub process when accessing the event. However, since the process
     # only subscribed to UserCreated events, this situation should not occur.
-    EventStore.Adapters.Postgres.Repo.delete_all(EventStore.Event)
+    EventStore.Adapter.Postgres.Repo.delete_all(EventStore.Event)
 
     assert is_list(Postgres.broadcast(user_created))
 

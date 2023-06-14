@@ -53,5 +53,5 @@ jobs:
       - run: mix compile --warnings-as-errors
       - run: mix do compile --force, test --warnings-as-errors
         env:
-          EVENT_STORE_ADAPTER: Elixir.EventStore.Adapters.${{matrix.adapter}}
+          EVENT_STORE_ADAPTER: Elixir.EventStore.Adapter.${{matrix.adapter}}
           EVENT_STORE_PUB_SUB: Elixir.EventStore.PubSub.${{matrix.pub_sub}}

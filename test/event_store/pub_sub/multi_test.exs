@@ -11,11 +11,11 @@ defmodule EventStore.PubSub.MultiTest do
   }
 
   setup_all do
-    start_supervised!(EventStore.Adapters.Postgres.Repo)
+    start_supervised!(EventStore.Adapter.Postgres.Repo)
 
     start_supervised!(
       {Postgrex.Notifications,
-       EventStore.Adapters.Postgres.Repo.config() ++
+       EventStore.Adapter.Postgres.Repo.config() ++
          [name: EventStore.PubSub.Postgres.Notifications]}
     )
 
@@ -38,7 +38,7 @@ defmodule EventStore.PubSub.MultiTest do
     pid2 = spawn_subscriber(Registry, UserCreated, self())
     pid3 = spawn_subscriber(Postgres, UserUpdated, self())
 
-    user_created = EventStore.insert_with_adapter(@user_created, EventStore.Adapters.Postgres)
+    user_created = EventStore.insert_with_adapter(@user_created, EventStore.Adapter.Postgres)
     assert is_list(Multi.broadcast(user_created))
 
     user_created = %{

@@ -10,23 +10,23 @@ defmodule EventStore.Application do
     Supervisor.start_link(children, opts)
   end
 
-  defp children(EventStore.Adapters.InMemory, EventStore.PubSub.Registry) do
-    [EventStore.PubSub.Registry, EventStore.Adapters.InMemory]
+  defp children(EventStore.Adapter.InMemory, EventStore.PubSub.Registry) do
+    [EventStore.PubSub.Registry, EventStore.Adapter.InMemory]
   end
 
-  defp children(EventStore.Adapters.Postgres, EventStore.PubSub.Registry) do
-    [EventStore.PubSub.Registry, EventStore.Adapters.Postgres.Repo]
+  defp children(EventStore.Adapter.Postgres, EventStore.PubSub.Registry) do
+    [EventStore.PubSub.Registry, EventStore.Adapter.Postgres.Repo]
   end
 
-  defp children(EventStore.Adapters.Postgres, pub_sub)
+  defp children(EventStore.Adapter.Postgres, pub_sub)
        when pub_sub in [
               EventStore.PubSub.Multi,
               EventStore.PubSub.Postgres
             ] do
-    repo_config = EventStore.Adapters.Postgres.Repo.config()
+    repo_config = EventStore.Adapter.Postgres.Repo.config()
 
     [
-      EventStore.Adapters.Postgres.Repo,
+      EventStore.Adapter.Postgres.Repo,
       {Postgrex.Notifications, repo_config ++ [name: EventStore.PubSub.Postgres.Notifications]},
       EventStore.PubSub.Registry,
       EventStore.PubSub.Postgres
@@ -34,6 +34,9 @@ defmodule EventStore.Application do
   end
 
   defp children(adapter, pub_sub) do
-    raise "Running event_store with both #{adapter} and #{pub_sub} makes no sense, please update your config"
+    raise ArgumentError, """
+    Configuration error: The event_store is currently configured to use both #{inspect(adapter)} as an adapter and #{inspect(pub_sub)} as a pub_sub module.
+    This combination is invalid. Please review your configuration settings and choose appropriate options for adapter and pub_sub.
+    """
   end
 end

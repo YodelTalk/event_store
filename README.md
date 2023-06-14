@@ -40,7 +40,7 @@ end
 
   ```elixir
   alias MyApp.Repo
-  alias EventStore.Adapters.Postgres.Repo, as: EventStoreRepo
+  alias EventStore.Adapter.Postgres.Repo, as: EventStoreRepo
 
   last_update = Repo.one(from(model in Model, select: max(model.inserted_at))) ||
     NaiveDateTime.new!(2000, 1, 1, 0, 0, 0)

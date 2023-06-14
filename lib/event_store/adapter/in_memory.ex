@@ -1,4 +1,4 @@
-defmodule EventStore.Adapters.InMemory do
+defmodule EventStore.Adapter.InMemory do
   @moduledoc """
   An in-memory event store adapter.
 

@@ -1,4 +1,5 @@
 defmodule SpawnSubscriber do
+  @moduledoc false
   import ExUnit.Assertions
 
   def spawn_subscriber(pub_sub, name, parent) do

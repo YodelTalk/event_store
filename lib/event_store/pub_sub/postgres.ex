@@ -1,4 +1,10 @@
 defmodule EventStore.PubSub.Postgres do
+  @moduledoc """
+  An `EventStore.PubSub` adapter using PostgreSQL's `LISTEN` and `NOTIFY` to
+  broadcast events. `EventStore.PubSub.Postgres` connects to a PostgreSQL
+  channel and alerts subscribers of new events.
+  """
+
   @behaviour EventStore.PubSub
 
   use GenServer
@@ -9,19 +15,26 @@ defmodule EventStore.PubSub.Postgres do
 
   @channel "events"
 
+  @doc """
+  Starts the PubSub server process.
+  """
   def start_link(opts \\ []) do
     name = Keyword.get(opts, :name, __MODULE__)
     GenServer.start_link(__MODULE__, nil, name: name)
   end
 
-  # PubSub API
-
+  @doc """
+  Subscribes the server to a specific topic using PostgreSQL notifications.
+  """
   @impl true
   def subscribe(topic) when is_atom(topic) do
     GenServer.cast(__MODULE__, {:subscribe, EventStore.to_name(topic)})
     EventStore.PubSub.Registry.subscribe(topic)
   end
 
+  @doc """
+  Broadcasts an event to all subscribers through PostgreSQL notifications.
+  """
   @impl true
   def broadcast(event) when is_struct(event) do
     payload = "#{event.id}:#{EventStore.to_name(event)}"

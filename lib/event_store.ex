@@ -166,7 +166,7 @@ defmodule EventStore do
   @doc """
   Streams events filtered by a single or multiple aggregate IDs or event names.
   """
-  @spec stream(aggregate_id() | [aggregate_id()] | name() | [name()]) :: [%EventStore.Event{}]
+  @spec stream(aggregate_id() | [aggregate_id()] | name() | [name()]) :: [EventStore.Event.t()]
   def stream(identifier)
       when is_uuid(identifier) or is_atom(identifier) or is_list(identifier) do
     handle_stream(@adapter.stream(identifier))
@@ -179,7 +179,7 @@ defmodule EventStore do
   @spec stream(
           aggregate_id() | [aggregate_id()] | name() | [name()],
           NaiveDateTime.t()
-        ) :: [%EventStore.Event{}]
+        ) :: [EventStore.Event.t()]
   def stream(identifier, timestamp)
       when is_uuid(identifier) or is_atom(identifier) or is_list(identifier) do
     handle_stream(@adapter.stream(identifier, timestamp))

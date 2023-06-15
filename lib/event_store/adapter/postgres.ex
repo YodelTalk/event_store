@@ -63,11 +63,20 @@ defmodule EventStore.Adapter.Postgres do
     |> select([e], %{aggregate_version: coalesce(max(e.aggregate_version) + 1, 1)})
   end
 
+  defp by_aggregate_id(query, aggregate_ids) when is_list(aggregate_ids) do
+    where(query, [e], e.aggregate_id in ^aggregate_ids)
+  end
+
   defp by_aggregate_id(query, aggregate_id) do
     where(query, aggregate_id: ^aggregate_id)
   end
 
-  defp by_event_name(query, event) when is_atom(event) do
+  defp by_event_name(query, events) when is_list(events) do
+    names = Enum.map(events, &EventStore.to_name/1)
+    where(query, [e], e.name in ^names)
+  end
+
+  defp by_event_name(query, event) do
     where(query, name: ^EventStore.to_name(event))
   end
 
@@ -76,7 +85,7 @@ defmodule EventStore.Adapter.Postgres do
   end
 
   @impl true
-  def stream(aggregate_id) when is_uuid(aggregate_id) do
+  def stream(aggregate_id) when is_one_or_more_uuids(aggregate_id) do
     Event
     |> by_aggregate_id(aggregate_id)
     |> order_by(:inserted_at)
@@ -84,7 +93,7 @@ defmodule EventStore.Adapter.Postgres do
   end
 
   @impl true
-  def stream(event) when is_atom(event) do
+  def stream(event) when is_one_or_more_atoms(event) do
     Event
     |> by_event_name(event)
     |> order_by(:inserted_at)
@@ -92,7 +101,7 @@ defmodule EventStore.Adapter.Postgres do
   end
 
   @impl true
-  def stream(aggregate_id, timestamp) when is_uuid(aggregate_id) do
+  def stream(aggregate_id, timestamp) when is_one_or_more_uuids(aggregate_id) do
     Event
     |> by_aggregate_id(aggregate_id)
     |> inserted_after(timestamp)
@@ -100,7 +109,7 @@ defmodule EventStore.Adapter.Postgres do
     |> Repo.stream()
   end
 
-  def stream(event, timestamp) when is_atom(event) do
+  def stream(event, timestamp) when is_one_or_more_atoms(event) do
     Event
     |> by_event_name(event)
     |> inserted_after(timestamp)

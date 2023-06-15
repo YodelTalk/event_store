@@ -43,6 +43,9 @@ defmodule EventStore do
   import EventStore.Guards
   alias EventStore.{AcknowledgementError, Event}
 
+  @type aggregate_id :: String.t()
+  @type name :: atom()
+
   @namespace Application.compile_env(:event_store, :namespace, __MODULE__)
   @sync_timeout Application.compile_env(:event_store, :sync_timeout, 5000)
 
@@ -153,7 +156,7 @@ defmodule EventStore do
   @doc """
   Subscribes the calling process to one or more events.
   """
-  @spec subscribe(module() | list(module())) :: any()
+  @spec subscribe(name() | list(name())) :: any()
   def subscribe(event) when is_atom(event), do: subscribe([event])
 
   def subscribe(events) when is_list(events) do
@@ -161,20 +164,25 @@ defmodule EventStore do
   end
 
   @doc """
-  Streams events for a specific aggregate ID or event name.
+  Streams events filtered by a single or multiple aggregate IDs or event names.
   """
-  def stream(aggregate_id_or_name)
-      when is_uuid(aggregate_id_or_name) or is_atom(aggregate_id_or_name) do
-    handle_stream(@adapter.stream(aggregate_id_or_name))
+  @spec stream(aggregate_id() | [aggregate_id()] | name() | [name()]) :: [%EventStore.Event{}]
+  def stream(identifier)
+      when is_uuid(identifier) or is_atom(identifier) or is_list(identifier) do
+    handle_stream(@adapter.stream(identifier))
   end
 
   @doc """
-  Streams events for a specific aggregate ID or event name, since a given
-  timestamp.
+  Streams events filtered by a single or multiple aggregate IDs or event names,
+  since a given timestamp.
   """
-  def stream(aggregate_id_or_name, timestamp)
-      when is_uuid(aggregate_id_or_name) or is_atom(aggregate_id_or_name) do
-    handle_stream(@adapter.stream(aggregate_id_or_name, timestamp))
+  @spec stream(
+          aggregate_id() | [aggregate_id()] | name() | [name()],
+          NaiveDateTime.t()
+        ) :: [%EventStore.Event{}]
+  def stream(identifier, timestamp)
+      when is_uuid(identifier) or is_atom(identifier) or is_list(identifier) do
+    handle_stream(@adapter.stream(identifier, timestamp))
   end
 
   defp handle_stream(stream) do

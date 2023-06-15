@@ -49,12 +49,28 @@ defmodule EventStore.Adapter.InMemory do
   end
 
   @impl true
+  def stream(aggregate_ids) when is_uuids(aggregate_ids) do
+    Agent.get(__MODULE__, & &1)
+    |> Enum.reverse()
+    |> Stream.filter(&(&1.aggregate_id in aggregate_ids))
+  end
+
+  @impl true
   def stream(event) when is_atom(event) do
     name = EventStore.to_name(event)
 
     Agent.get(__MODULE__, & &1)
     |> Enum.reverse()
     |> Stream.filter(&(&1.name == name))
+  end
+
+  @impl true
+  def stream(events) when is_atoms(events) do
+    names = Enum.map(events, &EventStore.to_name/1)
+
+    Agent.get(__MODULE__, & &1)
+    |> Enum.reverse()
+    |> Stream.filter(&(&1.name in names))
   end
 
   @impl true
@@ -68,6 +84,16 @@ defmodule EventStore.Adapter.InMemory do
   end
 
   @impl true
+  def stream(aggregate_ids, timestamp) when is_uuids(aggregate_ids) do
+    Agent.get(__MODULE__, & &1)
+    |> Enum.reverse()
+    |> Stream.filter(
+      &(&1.aggregate_id in aggregate_ids &&
+          NaiveDateTime.compare(&1.inserted_at, timestamp) in [:gt, :eq])
+    )
+  end
+
+  @impl true
   def stream(event, timestamp) when is_atom(event) do
     name = EventStore.to_name(event)
 
@@ -75,6 +101,17 @@ defmodule EventStore.Adapter.InMemory do
     |> Enum.reverse()
     |> Stream.filter(
       &(&1.name == name && NaiveDateTime.compare(&1.inserted_at, timestamp) in [:gt, :eq])
+    )
+  end
+
+  @impl true
+  def stream(events, timestamp) when is_atoms(events) do
+    names = Enum.map(events, &EventStore.to_name/1)
+
+    Agent.get(__MODULE__, & &1)
+    |> Enum.reverse()
+    |> Stream.filter(
+      &(&1.name in names && NaiveDateTime.compare(&1.inserted_at, timestamp) in [:gt, :eq])
     )
   end
 

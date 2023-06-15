@@ -14,9 +14,25 @@ defmodule EventStoreTest do
       EventStore.Adapter.Postgres ->
         start_supervised!(EventStore.PubSub.Registry)
         start_supervised!(EventStore.Adapter.Postgres.Repo)
+
+        Ecto.Adapters.SQL.Sandbox.mode(EventStore.Adapter.Postgres.Repo, :manual)
     end
 
     :ok
+  end
+
+  setup do
+    case EventStore.adapter() do
+      EventStore.Adapter.InMemory ->
+        :ok
+
+      EventStore.Adapter.Postgres ->
+        pid = Ecto.Adapters.SQL.Sandbox.start_owner!(EventStore.Adapter.Postgres.Repo)
+
+        on_exit(fn ->
+          Ecto.Adapters.SQL.Sandbox.stop_owner(pid)
+        end)
+    end
   end
 
   setup do

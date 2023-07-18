@@ -202,7 +202,7 @@ defmodule EventStore do
   This is an internal function and should not be called directly.
   """
   @spec cast(map()) :: any()
-  def cast(record) do
+  def cast(%{inserted_at: inserted_at} = record) when is_struct(inserted_at, NaiveDateTime) do
     module = Module.safe_concat(namespace(), record.name)
 
     module

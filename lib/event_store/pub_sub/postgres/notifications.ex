@@ -1,4 +1,6 @@
 defmodule EventStore.PubSub.Postgres.Notifications do
+  @moduledoc false
+
   def child_spec(opts) do
     opts =
       EventStore.Adapter.Postgres.Repo.config()

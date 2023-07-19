@@ -5,9 +5,12 @@ defmodule EventStore.Application do
   @doc false
   @impl true
   def start(_type, _args) do
-    children = children(EventStore.adapter(), EventStore.pub_sub())
-    opts = [strategy: :one_for_one, name: EventStore.Supervisor]
-    Supervisor.start_link(children, opts)
+    Supervisor.start_link(children(EventStore.adapter(), EventStore.pub_sub()),
+      strategy: :one_for_one,
+      name: EventStore.Supervisor,
+      max_restarts: 2,
+      max_seconds: 60
+    )
   end
 
   defp children(EventStore.Adapter.InMemory, EventStore.PubSub.Registry) do
@@ -23,11 +26,9 @@ defmodule EventStore.Application do
               EventStore.PubSub.Multi,
               EventStore.PubSub.Postgres
             ] do
-    repo_config = EventStore.Adapter.Postgres.Repo.config()
-
     [
       EventStore.Adapter.Postgres.Repo,
-      {Postgrex.Notifications, repo_config ++ [name: EventStore.PubSub.Postgres.Notifications]},
+      EventStore.PubSub.Postgres.Notifications,
       EventStore.PubSub.Registry,
       EventStore.PubSub.Postgres
     ]

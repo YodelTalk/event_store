@@ -51,7 +51,7 @@ defmodule EventStore.PubSub.Postgres do
 
   @impl true
   def init(_) do
-    {:ok, _ref} = Notifications.listen(__MODULE__.Notifications, @channel)
+    Notifications.listen(__MODULE__.Notifications, @channel)
     {:ok, []}
   end
 

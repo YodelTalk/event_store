@@ -3,6 +3,7 @@ defmodule EventStore.PubSub.Postgres.Notifications do
     opts =
       EventStore.Adapter.Postgres.Repo.config()
       |> Keyword.merge(name: __MODULE__)
+      |> Keyword.merge(auto_reconnect: true)
       |> Keyword.merge(opts)
 
     %{

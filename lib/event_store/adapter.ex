@@ -9,6 +9,12 @@ defmodule EventStore.Adapter do
   @callback insert(Ecto.Changeset.t()) :: {:ok, EventStore.Event.t()}
 
   @doc """
+  Streams all events.
+  """
+
+  @callback stream() :: [EventStore.Event.t()]
+
+  @doc """
   Streams events filtered by a single or multiple aggregate IDs or event names.
   """
   @callback stream(

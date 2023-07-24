@@ -164,6 +164,13 @@ defmodule EventStore do
   end
 
   @doc """
+  Streams all events.
+  """
+  def stream do
+    handle_stream(@adapter.stream())
+  end
+
+  @doc """
   Streams events filtered by a single or multiple aggregate IDs or event names.
   """
   @spec stream(aggregate_id() | [aggregate_id()] | name() | [name()]) :: [EventStore.Event.t()]

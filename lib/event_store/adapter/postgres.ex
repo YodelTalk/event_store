@@ -85,6 +85,13 @@ defmodule EventStore.Adapter.Postgres do
   end
 
   @impl true
+  def stream do
+    Event
+    |> order_by(:inserted_at)
+    |> Repo.stream()
+  end
+
+  @impl true
   def stream(aggregate_id) when is_one_or_more_uuids(aggregate_id) do
     Event
     |> by_aggregate_id(aggregate_id)

@@ -48,6 +48,13 @@ defmodule EventStore.Adapter.InMemory do
   end
 
   @impl true
+  def stream do
+    Agent.get(__MODULE__, & &1)
+    |> Enum.reverse()
+    |> Stream.map(& &1)
+  end
+
+  @impl true
   def stream(aggregate_id) when is_uuid(aggregate_id) do
     filter(&(&1.aggregate_id == aggregate_id))
   end

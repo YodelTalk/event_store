@@ -181,6 +181,22 @@ defmodule EventStoreTest do
     end
   end
 
+  describe "stream/0" do
+    test "returns all events" do
+      aggregate_id = Ecto.UUID.generate()
+
+      EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, payload: @data})
+      EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
+      EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
+      EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
+
+      transaction(fn ->
+        events = EventStore.stream()
+        assert length(Enum.to_list(events)) >= 4
+      end)
+    end
+  end
+
   describe "stream/1" do
     test "returns only events for the given aggregate ID" do
       aggregate_id = Ecto.UUID.generate()

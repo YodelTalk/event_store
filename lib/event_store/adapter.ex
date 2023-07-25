@@ -9,9 +9,8 @@ defmodule EventStore.Adapter do
   @callback insert(Ecto.Changeset.t()) :: {:ok, EventStore.Event.t()}
 
   @doc """
-  Streams all events.
+  Provides a stream of all existing events.
   """
-
   @callback stream() :: [EventStore.Event.t()]
 
   @doc """

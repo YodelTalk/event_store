@@ -163,8 +163,11 @@ defmodule EventStore do
     for event <- events, do: pub_sub().subscribe(event)
   end
 
+  defguardp is_identifier(identifier)
+            when is_uuid(identifier) or is_atom(identifier) or is_list(identifier)
+
   @doc """
-  Streams all events.
+  Provides a stream of all existing events
   """
   def stream do
     handle_stream(@adapter.stream())
@@ -174,8 +177,7 @@ defmodule EventStore do
   Streams events filtered by a single or multiple aggregate IDs or event names.
   """
   @spec stream(aggregate_id() | [aggregate_id()] | name() | [name()]) :: [EventStore.Event.t()]
-  def stream(identifier)
-      when is_uuid(identifier) or is_atom(identifier) or is_list(identifier) do
+  def stream(identifier) when is_identifier(identifier) do
     handle_stream(@adapter.stream(identifier))
   end
 
@@ -187,8 +189,7 @@ defmodule EventStore do
           aggregate_id() | [aggregate_id()] | name() | [name()],
           NaiveDateTime.t()
         ) :: [EventStore.Event.t()]
-  def stream(identifier, timestamp)
-      when is_uuid(identifier) or is_atom(identifier) or is_list(identifier) do
+  def stream(identifier, timestamp) when is_identifier(identifier) do
     handle_stream(@adapter.stream(identifier, timestamp))
   end
 

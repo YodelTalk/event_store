@@ -7,6 +7,16 @@ defmodule EventStore.Event do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @type t() :: %__MODULE__{
+          id: binary(),
+          name: String.t(),
+          version: non_neg_integer(),
+          aggregate_id: String.t(),
+          aggregate_version: non_neg_integer(),
+          payload: String.t(),
+          inserted_at: NaiveDateTime.t()
+        }
+
   defmacro __using__(_) do
     quote do
       @behaviour EventStore.Event
@@ -15,7 +25,6 @@ defmodule EventStore.Event do
       import Ecto.Changeset
       alias EventStore.Event
 
-      @primary_key false
       embedded_schema do
         field :from, :any, virtual: true
         field :aggregate_id, :string
@@ -25,6 +34,7 @@ defmodule EventStore.Event do
         field :inserted_at, :naive_datetime_usec
       end
 
+      @spec changeset(EventStore.Event.t()) :: Ecto.Changeset.t()
       def changeset(event) do
         attrs = %{
           aggregate_id: event.aggregate_id,
@@ -36,6 +46,7 @@ defmodule EventStore.Event do
         Event.changeset(%Event{}, attrs)
       end
 
+      @spec cast_payload(Ecto.Schema.t(), map()) :: Ecto.Changeset.t()
       def cast_payload(data, payload) do
         cast(data, %{payload: Jason.decode!(payload)}, [:payload])
       end
@@ -56,6 +67,7 @@ defmodule EventStore.Event do
   end
 
   @doc false
+  @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(event, attrs) do
     inserted_at = apply(Process.get(:naive_date_time, NaiveDateTime), :utc_now, [])
 

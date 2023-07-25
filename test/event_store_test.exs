@@ -1,9 +1,39 @@
 defmodule EventStoreTest do
-  use ExUnit.Case, async: true
-  alias EventStore.{UserCreated, UserUpdated}
+  use ExUnit.Case
+  alias EventStore.{UserCreated, UserUpdated, UserDestroyed}
 
   @unix_time ~N[1970-01-01 00:00:00.000000]
   @data %{"some" => "data"}
+
+  setup_all do
+    case EventStore.adapter() do
+      EventStore.Adapter.InMemory ->
+        start_supervised!(EventStore.PubSub.Registry)
+        start_supervised!(EventStore.Adapter.InMemory)
+
+      EventStore.Adapter.Postgres ->
+        start_supervised!(EventStore.PubSub.Registry)
+        start_supervised!(EventStore.Adapter.Postgres.Repo)
+
+        Ecto.Adapters.SQL.Sandbox.mode(EventStore.Adapter.Postgres.Repo, :manual)
+    end
+
+    :ok
+  end
+
+  setup do
+    case EventStore.adapter() do
+      EventStore.Adapter.InMemory ->
+        :ok
+
+      EventStore.Adapter.Postgres ->
+        pid = Ecto.Adapters.SQL.Sandbox.start_owner!(EventStore.Adapter.Postgres.Repo)
+
+        on_exit(fn ->
+          Ecto.Adapters.SQL.Sandbox.stop_owner(pid)
+        end)
+    end
+  end
 
   setup do
     start_supervised!(MockNaiveDateTime)
@@ -151,6 +181,90 @@ defmodule EventStoreTest do
     end
   end
 
+  describe "stream/0" do
+    test "returns all events" do
+      EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
+
+      transaction(fn ->
+        events = EventStore.stream()
+        assert length(Enum.to_list(events)) >= 1
+      end)
+    end
+  end
+
+  describe "stream/1" do
+    test "returns only events for the given aggregate ID" do
+      aggregate_id = Ecto.UUID.generate()
+
+      EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, payload: @data})
+      EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
+      EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
+      EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
+
+      transaction(fn ->
+        events = EventStore.stream(aggregate_id)
+        assert Enum.all?(events, &(&1.aggregate_id == aggregate_id))
+      end)
+    end
+
+    test "returns only events for the given aggregate IDs" do
+      aggregate_id = Ecto.UUID.generate()
+      another_id = Ecto.UUID.generate()
+
+      EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, payload: @data})
+      EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
+      EventStore.dispatch(%UserCreated{aggregate_id: another_id, payload: @data})
+      EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
+      EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
+
+      transaction(fn ->
+        events = EventStore.stream([aggregate_id, another_id])
+
+        assert Enum.all?(events, &(&1.aggregate_id in [aggregate_id, another_id]))
+        assert Enum.any?(events, &(&1.aggregate_id == aggregate_id))
+        assert Enum.any?(events, &(&1.aggregate_id == another_id))
+      end)
+    end
+
+    test "returns only events for the given event name" do
+      aggregate_id = Ecto.UUID.generate()
+
+      EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, payload: @data})
+      EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
+      EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
+      EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
+
+      transaction(fn ->
+        events = EventStore.stream(UserCreated)
+        assert Enum.all?(events, &is_struct(&1, UserCreated))
+      end)
+    end
+
+    test "returns only events for the given event names" do
+      aggregate_id = Ecto.UUID.generate()
+
+      EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, payload: @data})
+      EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
+      EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
+      EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
+      EventStore.dispatch(%UserDestroyed{aggregate_id: aggregate_id})
+
+      transaction(fn ->
+        events = EventStore.stream([UserCreated, UserUpdated])
+
+        assert Enum.all?(events, &(is_struct(&1, UserCreated) || is_struct(&1, UserUpdated)))
+        assert Enum.any?(events, &is_struct(&1, UserCreated))
+        assert Enum.any?(events, &is_struct(&1, UserUpdated))
+      end)
+    end
+
+    test "raises an error when an invalid aggregate ID is given" do
+      assert_raise FunctionClauseError, fn ->
+        EventStore.stream("DefinitelyNotAnUUID")
+      end
+    end
+  end
+
   describe "stream/2" do
     setup do
       {:ok, started_at: NaiveDateTime.utc_now()}
@@ -160,7 +274,7 @@ defmodule EventStoreTest do
       aggregate_id = Ecto.UUID.generate()
 
       MockNaiveDateTime.set(@unix_time)
-      {:ok, old} = EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, payload: @data})
+      EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, payload: @data})
       MockNaiveDateTime.reset()
 
       EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
@@ -168,10 +282,33 @@ defmodule EventStoreTest do
       EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
 
       transaction(fn ->
-        events = Enum.to_list(EventStore.stream(aggregate_id, started_at))
+        events = EventStore.stream(aggregate_id, started_at)
 
-        assert old not in events
-        assert Enum.all?(events, &assert(&1.aggregate_id == aggregate_id))
+        assert Enum.all?(events, &(&1.aggregate_id == aggregate_id))
+        refute Enum.any?(events, &(&1.inserted_at == @unix_time))
+      end)
+    end
+
+    test "returns only recent events for the given aggregate IDs", %{started_at: started_at} do
+      aggregate_id = Ecto.UUID.generate()
+      another_id = Ecto.UUID.generate()
+
+      MockNaiveDateTime.set(@unix_time)
+      EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, payload: @data})
+      MockNaiveDateTime.reset()
+
+      EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
+      EventStore.dispatch(%UserCreated{aggregate_id: another_id, payload: @data})
+      EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
+      EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
+
+      transaction(fn ->
+        events = EventStore.stream([aggregate_id, another_id], started_at)
+
+        assert Enum.all?(events, &(&1.aggregate_id in [aggregate_id, another_id]))
+        assert Enum.any?(events, &(&1.aggregate_id == aggregate_id))
+        assert Enum.any?(events, &(&1.aggregate_id == another_id))
+        refute Enum.any?(events, &(&1.inserted_at == @unix_time))
       end)
     end
 
@@ -179,7 +316,7 @@ defmodule EventStoreTest do
       aggregate_id = Ecto.UUID.generate()
 
       MockNaiveDateTime.set(@unix_time)
-      {:ok, old} = EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, payload: @data})
+      EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, payload: @data})
       MockNaiveDateTime.reset()
 
       EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
@@ -187,10 +324,33 @@ defmodule EventStoreTest do
       EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
 
       transaction(fn ->
-        events = Enum.to_list(EventStore.stream(UserCreated, started_at))
+        events = EventStore.stream(UserCreated, started_at)
 
-        assert old not in events
-        assert Enum.all?(events, &assert(is_struct(&1, UserCreated)))
+        assert Enum.all?(events, &is_struct(&1, UserCreated))
+        refute Enum.any?(events, &(&1.inserted_at == @unix_time))
+      end)
+    end
+
+    test "returns only events for the given event names", %{started_at: started_at} do
+      aggregate_id = Ecto.UUID.generate()
+
+      MockNaiveDateTime.set(@unix_time)
+      EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, payload: @data})
+      MockNaiveDateTime.reset()
+
+      EventStore.dispatch(%UserCreated{aggregate_id: aggregate_id, payload: @data})
+      EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
+      EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
+      EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
+      EventStore.dispatch(%UserDestroyed{aggregate_id: aggregate_id})
+
+      transaction(fn ->
+        events = EventStore.stream([UserCreated, UserUpdated], started_at)
+
+        assert Enum.all?(events, &(is_struct(&1, UserCreated) || is_struct(&1, UserUpdated)))
+        assert Enum.any?(events, &is_struct(&1, UserCreated))
+        assert Enum.any?(events, &is_struct(&1, UserUpdated))
+        refute Enum.any?(events, &(&1.inserted_at == @unix_time))
       end)
     end
 
@@ -258,8 +418,8 @@ defmodule EventStoreTest do
 
   defp transaction(fun) do
     case EventStore.adapter() do
-      EventStore.Adapters.InMemory -> {:ok, fun.()}
-      EventStore.Adapters.Postgres -> EventStore.Adapters.Postgres.Repo.transaction(fun)
+      EventStore.Adapter.InMemory -> {:ok, fun.()}
+      EventStore.Adapter.Postgres -> EventStore.Adapter.Postgres.Repo.transaction(fun)
     end
   end
 end

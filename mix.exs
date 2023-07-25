@@ -10,10 +10,16 @@ defmodule EventStore.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
+      package: package(),
 
       # Docs
       source_url: "https://github.com/yodeltalk/event_store",
-      docs: []
+      docs: [
+        groups_for_modules: [
+          Stores: ~r/EventStore\.Adapter\./,
+          PubSub: ~r/EventStore\.PubSub\./
+        ]
+      ]
     ]
   end
 
@@ -51,7 +57,14 @@ defmodule EventStore.MixProject do
   defp aliases do
     [
       setup: ["deps.get", "ecto.setup"],
-      "ecto.setup": ["ecto.create", "ecto.migrate"]
+      "ecto.setup": ["ecto.create", "ecto.migrate"],
+      test: "test --no-start"
+    ]
+  end
+
+  def package do
+    [
+      exclude_patterns: ["example"]
     ]
   end
 end

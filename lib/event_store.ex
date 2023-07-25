@@ -1,15 +1,65 @@
 defmodule EventStore do
   @moduledoc """
   A central store for managing and dispatching domain events.
+
+  EventStore is a core component for an event sourcing architecture, providing
+  functionalities to store, dispatch, and query events. It is designed to be
+  highly extensible with support for pluggable adapters.
+
+  ## Key Features
+
+  - **Dispatching Events:** Events can be dispatched to the store and
+    optionally, the dispatch process can be synchronous to ensure that
+    subscribers have acknowledged receipt.
+
+  - **Subscribing to Events:** Processes can subscribe to specific events,
+    allowing them to receive notifications when these events occur.
+
+  - **Querying Events:** It provides facilities to check the existence of
+    specific events and to retrieve the first or last event for specific
+    criteria.
+
+  - **Streaming Events:** Supports streaming events from the store which can be
+    used in projections and other read models.
+
+  - **Pluggable Adapters:** EventStore can be configured with different storage
+    adapters (e.g., in-memory, PostgreSQL) which allows for flexibility in storage
+    backends.
+
+  ## Configuration
+
+  - `:adapter` - Specifies the adapter to be used for the event store. Defaults
+    to `EventStore.Adapter.Postgres`.
+
+  - `:namespace` - Defines the namespace for the events.
+
+  - `:pubsub` - Specifies the PubSub adapter to be used for the event store. Defaults
+    to `EventStore.Adapter.PubSub.Registry`.
+
+  - `:sync_timeout` - Specifies the timeout for synchronous dispatches.
   """
 
   require Logger
   import EventStore.Guards
-  alias EventStore.{AcknowledgementError, Event, PubSub}
+  alias EventStore.{AcknowledgementError, Event}
 
-  @adapter Application.compile_env(:event_store, :adapter, EventStore.Adapters.InMemory)
+  @type aggregate_id :: String.t()
+  @type name :: atom()
+
   @namespace Application.compile_env(:event_store, :namespace, __MODULE__)
   @sync_timeout Application.compile_env(:event_store, :sync_timeout, 5000)
+
+  @doc """
+  Returns the configured namespace for the events.
+  """
+  def namespace, do: @namespace
+
+  @adapter Application.compile_env(:event_store, :adapter, EventStore.Adapter.Postgres)
+
+  @doc """
+  Returns the configured adapter for the EventStore.
+  """
+  def adapter, do: @adapter
 
   @doc """
   Checks if an event with a specific aggregate ID and name exists.
@@ -25,6 +75,13 @@ defmodule EventStore do
   Retrieves the last event with a specific aggregate ID and name.
   """
   defdelegate last(aggregate_id, name), to: @adapter
+
+  @pub_sub Application.compile_env(:event_store, :pub_sub, EventStore.PubSub.Registry)
+
+  @doc """
+  Returns the configured PubSub adapter for the EventStore.
+  """
+  def pub_sub, do: @pub_sub
 
   @doc """
   Dispatches an event to the EventStore.
@@ -61,22 +118,29 @@ defmodule EventStore do
   end
 
   defp dispatch_and_return_subscribers(event) do
-    {:ok, %{aggregate_version: aggregate_version, inserted_at: inserted_at}} =
-      event
-      |> event.__struct__.changeset()
-      |> then(&@adapter.insert(&1))
+    event = insert_with_adapter(event, adapter())
+    subscribers = pub_sub().broadcast(event)
 
-    event = %{
-      event
-      | aggregate_version: aggregate_version,
-        inserted_at: inserted_at,
-        from: self()
-    }
-
-    subscribers = PubSub.broadcast(event)
     Logger.debug("Dispatched #{inspect(event)} to #{inspect(subscribers, limit: :infinity)}")
 
     {event, subscribers}
+  end
+
+  @doc false
+  @spec insert_with_adapter(EventStore.Event.t(), module()) :: EventStore.Event.t()
+  def insert_with_adapter(event, adapter) do
+    {:ok, %{id: id, aggregate_version: aggregate_version, inserted_at: inserted_at}} =
+      event
+      |> event.__struct__.changeset()
+      |> then(&adapter.insert(&1))
+
+    %{
+      event
+      | id: id,
+        aggregate_version: aggregate_version,
+        inserted_at: inserted_at,
+        from: self()
+    }
   end
 
   @doc """
@@ -90,63 +154,92 @@ defmodule EventStore do
   end
 
   @doc """
-  Subscribes to one or more events.
+  Subscribes the calling process to one or more events.
   """
+  @spec subscribe(name() | list(name())) :: any()
   def subscribe(event) when is_atom(event), do: subscribe([event])
 
   def subscribe(events) when is_list(events) do
-    for topic <- Enum.map(events, &Atom.to_string/1) do
-      PubSub.subscribe(topic)
-    end
+    for event <- events, do: pub_sub().subscribe(event)
+  end
+
+  defguardp is_identifier(identifier)
+            when is_uuid(identifier) or is_atom(identifier) or is_list(identifier)
+
+  @doc """
+  Provides a stream of all existing events
+  """
+  def stream do
+    handle_stream(@adapter.stream())
   end
 
   @doc """
-  Streams events for a specific aggregate ID or event name.
+  Streams events filtered by a single or multiple aggregate IDs or event names.
   """
-  def stream(aggregate_id_or_name)
-      when is_uuid(aggregate_id_or_name) or is_atom(aggregate_id_or_name) do
-    handle_stream(@adapter.stream(aggregate_id_or_name))
+  @spec stream(aggregate_id() | [aggregate_id()] | name() | [name()]) :: [EventStore.Event.t()]
+  def stream(identifier) when is_identifier(identifier) do
+    handle_stream(@adapter.stream(identifier))
   end
 
   @doc """
-  Streams events for a specific aggregate ID or event name, since a given
-  timestamp.
+  Streams events filtered by a single or multiple aggregate IDs or event names,
+  since a given timestamp.
   """
-  def stream(aggregate_id_or_name, timestamp)
-      when is_uuid(aggregate_id_or_name) or is_atom(aggregate_id_or_name) do
-    handle_stream(@adapter.stream(aggregate_id_or_name, timestamp))
+  @spec stream(
+          aggregate_id() | [aggregate_id()] | name() | [name()],
+          NaiveDateTime.t()
+        ) :: [EventStore.Event.t()]
+  def stream(identifier, timestamp) when is_identifier(identifier) do
+    handle_stream(@adapter.stream(identifier, timestamp))
   end
 
   defp handle_stream(stream) do
-    Stream.map(stream, fn event ->
-      module = Module.safe_concat(@namespace, event.name)
-
-      module
-      |> struct!(%{
-        aggregate_id: event.aggregate_id,
-        aggregate_version: event.aggregate_version,
-        inserted_at: event.inserted_at
-      })
-      |> then(&module.cast_payload(&1, event.payload))
-      |> Ecto.Changeset.apply_changes()
-      |> tap(&Logger.debug("Event #{event.name} loaded: #{inspect(&1)}"))
+    Stream.map(stream, fn record ->
+      record
+      |> cast()
+      |> tap(&Logger.debug("Event #{record.name} loaded: #{inspect(&1)}"))
     end)
   end
+
+  @doc """
+  Casts a raw record from the store into a structured event.
+
+  This function takes a raw record, resolves the appropriate module based on the
+  event name, and casts it into an event struct, including applying the payload.
+
+  This is an internal function and should not be called directly.
+  """
+  @spec cast(map()) :: any()
+  def cast(%{inserted_at: inserted_at} = record) when is_struct(inserted_at, NaiveDateTime) do
+    module = Module.safe_concat(namespace(), record.name)
+
+    module
+    |> struct!(%{
+      aggregate_id: record.aggregate_id,
+      aggregate_version: record.aggregate_version,
+      inserted_at: record.inserted_at
+    })
+    |> then(&module.cast_payload(&1, record.payload))
+    |> Ecto.Changeset.apply_changes()
+  end
+
+  @doc false
+  def to_name(event) when is_struct(event), do: to_name(event.__struct__)
 
   def to_name(event) when is_atom(event) do
     event
     |> Atom.to_string()
-    |> String.replace_prefix("#{@namespace}.", "")
+    |> to_name()
   end
 
+  def to_name(event) when is_binary(event) do
+    String.replace_prefix(event, "#{namespace()}.", "")
+  end
+
+  @doc false
   def to_event(nil), do: nil
 
   def to_event(%Event{name: name} = event) do
     %{event | __struct__: Module.safe_concat(@namespace, name)}
   end
-
-  @doc """
-  Returns the configured adapter for the EventStore.
-  """
-  def adapter(), do: @adapter
 end

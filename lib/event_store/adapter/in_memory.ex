@@ -119,7 +119,7 @@ defmodule EventStore.Adapter.InMemory do
     Agent.get(__MODULE__, & &1)
     |> Enum.reverse()
     |> Enum.find(&(&1.aggregate_id == aggregate_id and &1.name == name))
-    |> EventStore.to_event()
+    |> EventStore.cast()
   end
 
   @impl true
@@ -128,6 +128,6 @@ defmodule EventStore.Adapter.InMemory do
 
     Agent.get(__MODULE__, & &1)
     |> Enum.find(&(&1.aggregate_id == aggregate_id and &1.name == name))
-    |> EventStore.to_event()
+    |> EventStore.cast()
   end
 end

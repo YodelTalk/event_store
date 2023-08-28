@@ -41,7 +41,7 @@ defmodule EventStore do
 
   require Logger
   import EventStore.Guards
-  alias EventStore.{AcknowledgementError, Event}
+  alias EventStore.AcknowledgementError
 
   @type aggregate_id :: String.t()
   @type name :: atom()
@@ -210,6 +210,8 @@ defmodule EventStore do
   This is an internal function and should not be called directly.
   """
   @spec cast(map()) :: any()
+  def cast(nil), do: nil
+
   def cast(%{inserted_at: inserted_at} = record) when is_struct(inserted_at, NaiveDateTime) do
     module = Module.safe_concat(namespace(), record.name)
 
@@ -234,12 +236,5 @@ defmodule EventStore do
 
   def to_name(event) when is_binary(event) do
     String.replace_prefix(event, "#{namespace()}.", "")
-  end
-
-  @doc false
-  def to_event(nil), do: nil
-
-  def to_event(%Event{name: name} = event) do
-    %{event | __struct__: Module.safe_concat(@namespace, name)}
   end
 end

@@ -140,7 +140,7 @@ defmodule EventStore.Adapter.Postgres do
     |> order_by(asc: :aggregate_version)
     |> limit(1)
     |> Repo.one()
-    |> EventStore.to_event()
+    |> EventStore.cast()
   end
 
   @impl true
@@ -151,6 +151,6 @@ defmodule EventStore.Adapter.Postgres do
     |> order_by(desc: :aggregate_version)
     |> limit(1)
     |> Repo.one()
-    |> EventStore.to_event()
+    |> EventStore.cast()
   end
 end

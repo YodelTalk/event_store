@@ -189,7 +189,7 @@ defmodule EventStore do
           aggregate_id() | [aggregate_id()] | name() | [name()],
           NaiveDateTime.t()
         ) :: [EventStore.Event.t()]
-  def stream(identifier, timestamp) when is_identifier(identifier) do
+  def stream(identifier, %NaiveDateTime{} = timestamp) when is_identifier(identifier) do
     handle_stream(@adapter.stream(identifier, timestamp))
   end
 

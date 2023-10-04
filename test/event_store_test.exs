@@ -1,39 +1,16 @@
 defmodule EventStoreTest do
   use ExUnit.Case
+  require Ecto.Query
   alias EventStore.{UserCreated, UserUpdated, UserDestroyed}
 
   @unix_time ~N[1970-01-01 00:00:00.000000]
   @data %{"some" => "data"}
 
   setup_all do
-    case EventStore.adapter() do
-      EventStore.Adapter.InMemory ->
-        start_supervised!(EventStore.PubSub.Registry)
-        start_supervised!(EventStore.Adapter.InMemory)
-
-      EventStore.Adapter.Postgres ->
-        start_supervised!(EventStore.PubSub.Registry)
-        start_supervised!(EventStore.Adapter.Postgres.Repo)
-
-        Ecto.Adapters.SQL.Sandbox.mode(EventStore.Adapter.Postgres.Repo, :manual)
-    end
-
-    :ok
+    {:ok, adapter: EventStore.adapter()}
   end
 
-  setup do
-    case EventStore.adapter() do
-      EventStore.Adapter.InMemory ->
-        :ok
-
-      EventStore.Adapter.Postgres ->
-        pid = Ecto.Adapters.SQL.Sandbox.start_owner!(EventStore.Adapter.Postgres.Repo)
-
-        on_exit(fn ->
-          Ecto.Adapters.SQL.Sandbox.stop_owner(pid)
-        end)
-    end
-  end
+  setup :start_dependencies
 
   setup do
     start_supervised!(MockNaiveDateTime)
@@ -105,6 +82,21 @@ defmodule EventStoreTest do
           aggregate_id: aggregate_id,
           payload: @data
         })
+    end
+
+    if EventStore.adapter() == EventStore.Adapter.Postgres do
+      test "accepts empty payload" do
+        aggregate_id = Ecto.UUID.generate()
+
+        EventStore.dispatch(%UserCreated{
+          aggregate_id: aggregate_id
+        })
+
+        assert %EventStore.Event{payload: nil} =
+                 EventStore.Adapter.Postgres.Repo.one!(
+                   Ecto.Query.where(EventStore.Event, aggregate_id: ^aggregate_id)
+                 )
+      end
     end
   end
 
@@ -421,5 +413,24 @@ defmodule EventStoreTest do
       EventStore.Adapter.InMemory -> {:ok, fun.()}
       EventStore.Adapter.Postgres -> EventStore.Adapter.Postgres.Repo.transaction(fun)
     end
+  end
+
+  defp start_dependencies(%{adapter: EventStore.Adapter.InMemory}) do
+    start_supervised!(EventStore.PubSub.Registry)
+    start_supervised!(EventStore.Adapter.InMemory)
+
+    :ok
+  end
+
+  defp start_dependencies(%{adapter: EventStore.Adapter.Postgres}) do
+    start_supervised!(EventStore.PubSub.Registry)
+    start_supervised!(EventStore.Adapter.Postgres.Repo)
+
+    Ecto.Adapters.SQL.Sandbox.mode(EventStore.Adapter.Postgres.Repo, :manual)
+
+    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(EventStore.Adapter.Postgres.Repo)
+    on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
+
+    :ok
   end
 end

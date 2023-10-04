@@ -36,11 +36,17 @@ defmodule EventStore.Event do
 
       @spec changeset(EventStore.Event.t()) :: Ecto.Changeset.t()
       def changeset(event) do
+        payload =
+          case event.payload do
+            nil -> nil
+            payload -> Jason.encode!(payload)
+          end
+
         attrs = %{
           aggregate_id: event.aggregate_id,
           aggregate_version: event.aggregate_version,
           name: __MODULE__ |> Module.split() |> List.last(),
-          payload: Jason.encode!(event.payload)
+          payload: payload
         }
 
         Event.changeset(%Event{}, attrs)

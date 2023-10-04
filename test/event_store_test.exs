@@ -1,5 +1,6 @@
 defmodule EventStoreTest do
   use ExUnit.Case
+  require Ecto.Query
   alias EventStore.{UserCreated, UserUpdated, UserDestroyed}
 
   @unix_time ~N[1970-01-01 00:00:00.000000]
@@ -81,6 +82,21 @@ defmodule EventStoreTest do
           aggregate_id: aggregate_id,
           payload: @data
         })
+    end
+
+    if EventStore.adapter() == EventStore.Adapter.Postgres do
+      test "accepts empty payload" do
+        aggregate_id = Ecto.UUID.generate()
+
+        EventStore.dispatch(%UserCreated{
+          aggregate_id: aggregate_id
+        })
+
+        assert %EventStore.Event{payload: nil} =
+                 EventStore.Adapter.Postgres.Repo.one!(
+                   Ecto.Query.where(EventStore.Event, aggregate_id: ^aggregate_id)
+                 )
+      end
     end
   end
 

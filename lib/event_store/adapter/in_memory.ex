@@ -38,7 +38,7 @@ defmodule EventStore.Adapter.InMemory do
 
     Agent.update(__MODULE__, &[event | &1])
 
-    {:ok, event}
+    event
   end
 
   defp filter(fun) do

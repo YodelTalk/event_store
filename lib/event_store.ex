@@ -129,7 +129,7 @@ defmodule EventStore do
   @doc false
   @spec insert_with_adapter(EventStore.Event.t(), module()) :: EventStore.Event.t()
   def insert_with_adapter(event, adapter) do
-    {:ok, %{id: id, aggregate_version: aggregate_version, inserted_at: inserted_at}} =
+    %{id: id, aggregate_version: aggregate_version, inserted_at: inserted_at} =
       event
       |> event.__struct__.changeset()
       |> then(&adapter.insert(&1))
@@ -169,6 +169,7 @@ defmodule EventStore do
   @doc """
   Provides a stream of all existing events
   """
+  @spec stream() :: Enum.t()
   def stream do
     handle_stream(@adapter.stream())
   end
@@ -176,7 +177,7 @@ defmodule EventStore do
   @doc """
   Streams events filtered by a single or multiple aggregate IDs or event names.
   """
-  @spec stream(aggregate_id() | [aggregate_id()] | name() | [name()]) :: [EventStore.Event.t()]
+  @spec stream(aggregate_id() | [aggregate_id()] | name() | [name()]) :: Enum.t()
   def stream(identifier) when is_identifier(identifier) do
     handle_stream(@adapter.stream(identifier))
   end
@@ -188,7 +189,7 @@ defmodule EventStore do
   @spec stream(
           aggregate_id() | [aggregate_id()] | name() | [name()],
           NaiveDateTime.t()
-        ) :: [EventStore.Event.t()]
+        ) :: Enum.t()
   def stream(identifier, %NaiveDateTime{} = timestamp) when is_identifier(identifier) do
     handle_stream(@adapter.stream(identifier, timestamp))
   end

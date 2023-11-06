@@ -49,7 +49,7 @@ defmodule EventStore.Adapter.Postgres do
     )
     |> case do
       {1, [%{id: id, aggregate_version: aggregate_version} | _]} ->
-        {:ok, %{event | id: id, aggregate_version: aggregate_version}}
+        %{event | id: id, aggregate_version: aggregate_version}
 
       {0, []} ->
         insert!(event)

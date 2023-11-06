@@ -7,13 +7,16 @@ defmodule EventStore.Event do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @type t() :: %__MODULE__{
+  @type payload :: String.t()
+
+  @type t :: %__MODULE__{
           id: binary(),
           name: String.t(),
+          from: any(),
           version: non_neg_integer(),
           aggregate_id: String.t(),
           aggregate_version: non_neg_integer(),
-          payload: String.t(),
+          payload: payload(),
           inserted_at: NaiveDateTime.t()
         }
 
@@ -27,9 +30,9 @@ defmodule EventStore.Event do
 
       embedded_schema do
         field :from, :any, virtual: true
+        field :version, :integer, default: 1
         field :aggregate_id, :string
         field :aggregate_version, :integer
-        field :version, :integer, default: 1
         field :payload, :map
         field :inserted_at, :naive_datetime_usec
       end
@@ -52,7 +55,7 @@ defmodule EventStore.Event do
         Event.changeset(%Event{}, attrs)
       end
 
-      @spec cast_payload(Ecto.Schema.t(), map()) :: Ecto.Changeset.t()
+      @spec cast_payload(Ecto.Schema.t(), EventStore.Event.payload()) :: Ecto.Changeset.t()
       def cast_payload(data, payload) do
         cast(data, %{payload: Jason.decode!(payload)}, [:payload])
       end
@@ -60,11 +63,12 @@ defmodule EventStore.Event do
   end
 
   @callback changeset(struct()) :: Ecto.Changeset.t()
-  @callback cast_payload(Ecto.Schema.t(), map()) :: Ecto.Changeset.t()
+  @callback cast_payload(Ecto.Schema.t(), EventStore.Event.payload()) :: Ecto.Changeset.t()
 
   @primary_key {:id, :binary_id, autogenerate: true}
   schema "events" do
     field :name, :string
+    field :from, :any, virtual: true
     field :version, :integer, default: 1
     field :aggregate_id, :string
     field :aggregate_version, :integer

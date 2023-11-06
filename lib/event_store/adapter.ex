@@ -6,12 +6,12 @@ defmodule EventStore.Adapter do
   @doc """
   Inserts an event changeset and returns the inserted event.
   """
-  @callback insert(Ecto.Changeset.t()) :: {:ok, EventStore.Event.t()}
+  @callback insert(Ecto.Changeset.t()) :: EventStore.Event.t()
 
   @doc """
   Provides a stream of all existing events.
   """
-  @callback stream() :: [EventStore.Event.t()]
+  @callback stream() :: Enum.t()
 
   @doc """
   Streams events filtered by a single or multiple aggregate IDs or event names.
@@ -21,7 +21,7 @@ defmodule EventStore.Adapter do
               | [EventStore.aggregate_id()]
               | EventStore.name()
               | [EventStore.name()]
-            ) :: [EventStore.Event.t()]
+            ) :: Enum.t()
 
   @doc """
   Streams events filtered by a single or multiple aggregate IDs or event names,
@@ -33,7 +33,7 @@ defmodule EventStore.Adapter do
               | EventStore.name()
               | [EventStore.name()],
               NaiveDateTime.t()
-            ) :: [EventStore.Event.t()]
+            ) :: Enum.t()
 
   @doc """
   Checks if an event with a specific aggregate ID and name exists.

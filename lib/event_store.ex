@@ -218,6 +218,7 @@ defmodule EventStore do
 
     module
     |> struct!(%{
+      id: record.id,
       aggregate_id: record.aggregate_id,
       aggregate_version: record.aggregate_version,
       inserted_at: record.inserted_at

@@ -179,7 +179,9 @@ defmodule EventStoreTest do
 
       transaction(fn ->
         events = EventStore.stream()
+
         assert length(Enum.to_list(events)) >= 1
+        assert Enum.all?(events, &is_binary(&1.id))
       end)
     end
   end
@@ -195,7 +197,9 @@ defmodule EventStoreTest do
 
       transaction(fn ->
         events = EventStore.stream(aggregate_id)
+
         assert Enum.all?(events, &(&1.aggregate_id == aggregate_id))
+        assert Enum.all?(events, &is_binary(&1.id))
       end)
     end
 
@@ -215,6 +219,7 @@ defmodule EventStoreTest do
         assert Enum.all?(events, &(&1.aggregate_id in [aggregate_id, another_id]))
         assert Enum.any?(events, &(&1.aggregate_id == aggregate_id))
         assert Enum.any?(events, &(&1.aggregate_id == another_id))
+        assert Enum.all?(events, &is_binary(&1.id))
       end)
     end
 
@@ -229,6 +234,7 @@ defmodule EventStoreTest do
       transaction(fn ->
         events = EventStore.stream(UserCreated)
         assert Enum.all?(events, &is_struct(&1, UserCreated))
+        assert Enum.all?(events, &is_binary(&1.id))
       end)
     end
 
@@ -247,6 +253,7 @@ defmodule EventStoreTest do
         assert Enum.all?(events, &(is_struct(&1, UserCreated) || is_struct(&1, UserUpdated)))
         assert Enum.any?(events, &is_struct(&1, UserCreated))
         assert Enum.any?(events, &is_struct(&1, UserUpdated))
+        assert Enum.all?(events, &is_binary(&1.id))
       end)
     end
 
@@ -278,6 +285,7 @@ defmodule EventStoreTest do
 
         assert Enum.all?(events, &(&1.aggregate_id == aggregate_id))
         refute Enum.any?(events, &(&1.inserted_at == @unix_time))
+        assert Enum.all?(events, &is_binary(&1.id))
       end)
     end
 
@@ -301,6 +309,7 @@ defmodule EventStoreTest do
         assert Enum.any?(events, &(&1.aggregate_id == aggregate_id))
         assert Enum.any?(events, &(&1.aggregate_id == another_id))
         refute Enum.any?(events, &(&1.inserted_at == @unix_time))
+        assert Enum.all?(events, &is_binary(&1.id))
       end)
     end
 
@@ -320,6 +329,7 @@ defmodule EventStoreTest do
 
         assert Enum.all?(events, &is_struct(&1, UserCreated))
         refute Enum.any?(events, &(&1.inserted_at == @unix_time))
+        assert Enum.all?(events, &is_binary(&1.id))
       end)
     end
 
@@ -343,6 +353,7 @@ defmodule EventStoreTest do
         assert Enum.any?(events, &is_struct(&1, UserCreated))
         assert Enum.any?(events, &is_struct(&1, UserUpdated))
         refute Enum.any?(events, &(&1.inserted_at == @unix_time))
+        assert Enum.all?(events, &is_binary(&1.id))
       end)
     end
 

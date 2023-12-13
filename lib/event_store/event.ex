@@ -31,7 +31,7 @@ defmodule EventStore.Event do
       embedded_schema do
         field :from, :any, virtual: true
         field :version, :integer, default: 1
-        field :aggregate_id, :string
+        field :aggregate_id, :binary_id
         field :aggregate_version, :integer
         field :payload, :map
         field :inserted_at, :naive_datetime_usec
@@ -39,20 +39,23 @@ defmodule EventStore.Event do
 
       @spec changeset(EventStore.Event.t()) :: Ecto.Changeset.t()
       def changeset(event) do
+        name =
+          __MODULE__
+          |> Module.split()
+          |> List.last()
+
         payload =
           case event.payload do
             nil -> nil
             payload -> Jason.encode!(payload)
           end
 
-        attrs = %{
+        Event.changeset(%Event{}, %{
           aggregate_id: event.aggregate_id,
           aggregate_version: event.aggregate_version,
-          name: __MODULE__ |> Module.split() |> List.last(),
+          name: name,
           payload: payload
-        }
-
-        Event.changeset(%Event{}, attrs)
+        })
       end
 
       @spec cast_payload(Ecto.Schema.t(), EventStore.Event.payload()) :: Ecto.Changeset.t()

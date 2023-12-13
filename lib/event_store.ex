@@ -119,7 +119,7 @@ defmodule EventStore do
 
   defp dispatch_and_return_subscribers(event) do
     event = insert_with_adapter(event, adapter())
-    subscribers = pub_sub().broadcast(event)
+    subscribers = @pub_sub.broadcast(event)
 
     Logger.debug("Dispatched #{inspect(event)} to #{inspect(subscribers, limit: :infinity)}")
 
@@ -160,7 +160,7 @@ defmodule EventStore do
   def subscribe(event) when is_atom(event), do: subscribe([event])
 
   def subscribe(events) when is_list(events) do
-    for event <- events, do: pub_sub().subscribe(event)
+    for event <- events, do: @pub_sub.subscribe(event)
   end
 
   defguardp is_identifier(identifier)
@@ -218,6 +218,7 @@ defmodule EventStore do
 
     module
     |> struct!(%{
+      id: record.id,
       aggregate_id: record.aggregate_id,
       aggregate_version: record.aggregate_version,
       inserted_at: record.inserted_at

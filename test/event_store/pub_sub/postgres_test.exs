@@ -46,7 +46,8 @@ defmodule EventStore.PubSub.PostgresTest do
 
     user_created = %{
       @user_created
-      | aggregate_version: user_created.aggregate_version,
+      | id: user_created.id,
+        aggregate_version: user_created.aggregate_version,
         inserted_at: user_created.inserted_at
     }
 

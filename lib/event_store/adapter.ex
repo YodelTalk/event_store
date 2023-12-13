@@ -36,6 +36,12 @@ defmodule EventStore.Adapter do
             ) :: Enum.t()
 
   @doc """
+  Runs the given function in a transaction if necessary. See
+  `Ecto.Repo.transaction/2` for more details.
+  """
+  @callback transaction(fun(), keyword()) :: any()
+
+  @doc """
   Checks if an event with a specific aggregate ID and name exists.
   """
   @callback exists?(EventStore.aggregate_id(), EventStore.name()) :: boolean()

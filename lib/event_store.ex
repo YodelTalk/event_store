@@ -40,6 +40,8 @@ defmodule EventStore do
   """
 
   require Logger
+  require EventStore.Adapter.InMemory
+
   import EventStore.Guards
   alias EventStore.AcknowledgementError
 
@@ -167,7 +169,7 @@ defmodule EventStore do
             when is_uuid(identifier) or is_atom(identifier) or is_list(identifier)
 
   @doc """
-  Provides a stream of all existing events
+  Provides a stream of all existing events.
   """
   @spec stream() :: Enum.t()
   def stream do
@@ -201,6 +203,8 @@ defmodule EventStore do
       |> tap(&Logger.debug("Event #{record.name} loaded: #{inspect(&1)}"))
     end)
   end
+
+  defdelegate transaction(fun, _opts \\ []), to: @adapter
 
   @doc """
   Casts a raw record from the store into a structured event.

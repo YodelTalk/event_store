@@ -167,7 +167,7 @@ defmodule EventStore do
             when is_uuid(identifier) or is_atom(identifier) or is_list(identifier)
 
   @doc """
-  Provides a stream of all existing events
+  Provides a stream of all existing events.
   """
   @spec stream() :: Enum.t()
   def stream do

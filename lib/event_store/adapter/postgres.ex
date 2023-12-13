@@ -116,6 +116,7 @@ defmodule EventStore.Adapter.Postgres do
     |> Repo.stream()
   end
 
+  @impl true
   def stream(event, timestamp) when is_one_or_more_atoms(event) do
     Event
     |> by_event_name(event)
@@ -123,6 +124,9 @@ defmodule EventStore.Adapter.Postgres do
     |> order_by(:inserted_at)
     |> Repo.stream()
   end
+
+  @impl true
+  defdelegate transaction(fun, opts \\ []), to: Repo
 
   @impl true
   def exists?(aggregate_id, event) when is_atom(event) do

@@ -105,6 +105,13 @@ defmodule EventStore.Adapter.InMemory do
   end
 
   @impl true
+  defmacro transaction(fun, _opts \\ []) do
+    quote do
+      unquote(fun).()
+    end
+  end
+
+  @impl true
   def exists?(aggregate_id, event) when is_atom(event) do
     name = EventStore.to_name(event)
 

@@ -177,7 +177,7 @@ defmodule EventStoreTest do
     test "returns all events" do
       EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
 
-      transaction(fn ->
+      EventStore.transaction(fn ->
         events = EventStore.stream()
 
         assert length(Enum.to_list(events)) >= 1
@@ -195,7 +195,7 @@ defmodule EventStoreTest do
       EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
       EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
 
-      transaction(fn ->
+      EventStore.transaction(fn ->
         events = EventStore.stream(aggregate_id)
 
         assert Enum.all?(events, &(&1.aggregate_id == aggregate_id))
@@ -213,7 +213,7 @@ defmodule EventStoreTest do
       EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
       EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
 
-      transaction(fn ->
+      EventStore.transaction(fn ->
         events = EventStore.stream([aggregate_id, another_id])
 
         assert Enum.all?(events, &(&1.aggregate_id in [aggregate_id, another_id]))
@@ -231,7 +231,7 @@ defmodule EventStoreTest do
       EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
       EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
 
-      transaction(fn ->
+      EventStore.transaction(fn ->
         events = EventStore.stream(UserCreated)
         assert Enum.all?(events, &is_struct(&1, UserCreated))
         assert Enum.all?(events, &is_binary(&1.id))
@@ -247,7 +247,7 @@ defmodule EventStoreTest do
       EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
       EventStore.dispatch(%UserDestroyed{aggregate_id: aggregate_id})
 
-      transaction(fn ->
+      EventStore.transaction(fn ->
         events = EventStore.stream([UserCreated, UserUpdated])
 
         assert Enum.all?(events, &(is_struct(&1, UserCreated) || is_struct(&1, UserUpdated)))
@@ -280,7 +280,7 @@ defmodule EventStoreTest do
       EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
       EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
 
-      transaction(fn ->
+      EventStore.transaction(fn ->
         events = EventStore.stream(aggregate_id, started_at)
 
         assert Enum.all?(events, &(&1.aggregate_id == aggregate_id))
@@ -302,7 +302,7 @@ defmodule EventStoreTest do
       EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
       EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
 
-      transaction(fn ->
+      EventStore.transaction(fn ->
         events = EventStore.stream([aggregate_id, another_id], started_at)
 
         assert Enum.all?(events, &(&1.aggregate_id in [aggregate_id, another_id]))
@@ -324,7 +324,7 @@ defmodule EventStoreTest do
       EventStore.dispatch(%UserCreated{aggregate_id: Ecto.UUID.generate(), payload: @data})
       EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
 
-      transaction(fn ->
+      EventStore.transaction(fn ->
         events = EventStore.stream(UserCreated, started_at)
 
         assert Enum.all?(events, &is_struct(&1, UserCreated))
@@ -346,7 +346,7 @@ defmodule EventStoreTest do
       EventStore.dispatch(%UserUpdated{aggregate_id: aggregate_id, payload: @data})
       EventStore.dispatch(%UserDestroyed{aggregate_id: aggregate_id})
 
-      transaction(fn ->
+      EventStore.transaction(fn ->
         events = EventStore.stream([UserCreated, UserUpdated], started_at)
 
         assert Enum.all?(events, &(is_struct(&1, UserCreated) || is_struct(&1, UserUpdated)))
@@ -417,13 +417,6 @@ defmodule EventStoreTest do
     refute is_nil(event.aggregate_version)
     assert %{} = event.payload
     refute is_nil(event.inserted_at)
-  end
-
-  defp transaction(fun) do
-    case EventStore.adapter() do
-      EventStore.Adapter.InMemory -> {:ok, fun.()}
-      EventStore.Adapter.Postgres -> EventStore.Adapter.Postgres.Repo.transaction(fun)
-    end
   end
 
   defp start_dependencies(%{adapter: EventStore.Adapter.InMemory}) do

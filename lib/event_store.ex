@@ -45,13 +45,28 @@ defmodule EventStore do
   import EventStore.Guards
   alias EventStore.AcknowledgementError
 
-  @type aggregate_id :: String.t()
-  @type name :: atom()
-  @type aggregate_ids :: aggregate_id() | [aggregate_ids()]
-  @type names :: name | [name()]
-
   @namespace Application.compile_env(:event_store, :namespace, __MODULE__)
   @sync_timeout Application.compile_env(:event_store, :sync_timeout, 5000)
+
+  @typedoc """
+  The unique identifier for an aggregate as an UUID `t:String.t/0`.
+  """
+  @type aggregate_id :: String.t()
+
+  @typedoc """
+  One or more `t:EventStore.aggregate_id/0`s.
+  """
+  @type aggregate_ids :: aggregate_id() | [aggregate_ids()]
+
+  @typedoc """
+  The name used to identify an event as `t:module/0`.
+  """
+  @type name :: module()
+
+  @typedoc """
+  One or more `t:EventStore.name/0`s.
+  """
+  @type names :: name | [name()]
 
   @doc """
   Returns the configured namespace for the events.
@@ -160,11 +175,11 @@ defmodule EventStore do
   @doc """
   Subscribes the calling process to one or more events.
   """
-  @spec subscribe(name() | list(name())) :: any()
-  def subscribe(event) when is_atom(event), do: subscribe([event])
+  @spec subscribe(names()) :: any()
+  def subscribe(names) when is_atom(names), do: subscribe([names])
 
-  def subscribe(events) when is_list(events) do
-    for event <- events, do: @pub_sub.subscribe(event)
+  def subscribe(names) when is_list(names) do
+    for name <- names, do: @pub_sub.subscribe(name)
   end
 
   @doc """

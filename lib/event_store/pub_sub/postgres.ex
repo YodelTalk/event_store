@@ -24,12 +24,12 @@ defmodule EventStore.PubSub.Postgres do
   end
 
   @doc """
-  Subscribes the server to a specific topic using PostgreSQL notifications.
+  Subscribes the calling process to a specific event type using PostgreSQL notifications.
   """
   @impl true
-  def subscribe(topic) when is_atom(topic) do
-    GenServer.cast(__MODULE__, {:subscribe, EventStore.to_name(topic)})
-    EventStore.PubSub.Registry.subscribe(topic)
+  def subscribe(name) when is_atom(name) do
+    GenServer.cast(__MODULE__, {:subscribe, EventStore.to_name(name)})
+    EventStore.PubSub.Registry.subscribe(name)
   end
 
   @doc """
@@ -56,25 +56,25 @@ defmodule EventStore.PubSub.Postgres do
   end
 
   @impl true
-  def handle_cast({:subscribe, topic}, topics) do
-    {:noreply, Enum.uniq([topic | topics])}
+  def handle_cast({:subscribe, name}, names) do
+    {:noreply, Enum.uniq([name | names])}
   end
 
   @impl true
   def handle_info(
         {:notification, _pid, _ref, @channel,
-         <<id::binary-size(36), ":", topic::binary>> = payload},
-        topics
+         <<id::binary-size(36), ":", name::binary>> = payload},
+        names
       ) do
     Logger.debug("Received #{inspect(payload)} on channel #{@channel}")
 
-    if EventStore.to_name(topic) in topics do
+    if EventStore.to_name(name) in names do
       EventStore.Event
       |> Repo.get!(id)
       |> EventStore.cast()
       |> EventStore.PubSub.Registry.broadcast()
     end
 
-    {:noreply, topics}
+    {:noreply, names}
   end
 end

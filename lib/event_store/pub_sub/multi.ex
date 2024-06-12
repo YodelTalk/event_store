@@ -11,11 +11,11 @@ defmodule EventStore.PubSub.Multi do
   @broadcast_to Application.compile_env(:event_store, :broadcast_to, [EventStore.PubSub.Registry])
 
   @doc """
-  Subscribes to a specific topic across all configured PubSub systems.
+  Subscribes the calling process to a specific event type across all configured PubSub systems.
   """
   @impl true
-  def subscribe(topic) when is_atom(topic) do
-    Enum.each(@subscribe_to, & &1.subscribe(topic))
+  def subscribe(name) when is_atom(name) do
+    Enum.each(@subscribe_to, & &1.subscribe(name))
 
     :ok
   end

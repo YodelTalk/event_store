@@ -6,7 +6,7 @@ defmodule EventStore.Adapter do
   @doc """
   Inserts an event changeset and returns the inserted event.
   """
-  @callback insert(Ecto.Changeset.t()) :: EventStore.Event.t()
+  @callback insert(changeset :: Ecto.Changeset.t()) :: EventStore.Event.t()
 
   @doc """
   Provides a stream of all existing events.
@@ -17,10 +17,11 @@ defmodule EventStore.Adapter do
   Streams events filtered by a single or multiple aggregate IDs or event names.
   """
   @callback stream(
-              EventStore.aggregate_id()
-              | [EventStore.aggregate_id()]
-              | EventStore.name()
-              | [EventStore.name()]
+              identifier ::
+                EventStore.aggregate_id()
+                | [EventStore.aggregate_id()]
+                | EventStore.name()
+                | [EventStore.name()]
             ) :: Enum.t()
 
   @doc """
@@ -28,18 +29,19 @@ defmodule EventStore.Adapter do
   since a given timestamp.
   """
   @callback stream_since(
-              EventStore.aggregate_id()
-              | [EventStore.aggregate_id()]
-              | EventStore.name()
-              | [EventStore.name()],
-              NaiveDateTime.t()
+              identifier ::
+                EventStore.aggregate_id()
+                | [EventStore.aggregate_id()]
+                | EventStore.name()
+                | [EventStore.name()],
+              timestamp :: NaiveDateTime.t()
             ) :: Enum.t()
 
   @doc """
   Runs the given function in a transaction if necessary. See
   `Ecto.Repo.transaction/2` for more details.
   """
-  @callback transaction(fun(), keyword()) :: any()
+  @callback transaction(function :: fun(), opts :: keyword()) :: any()
 
   @doc """
   Checks if an event with a specific aggregate ID and name exists.

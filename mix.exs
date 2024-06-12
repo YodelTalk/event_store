@@ -13,10 +13,11 @@ defmodule EventStore.MixProject do
       package: package(),
 
       # Docs
-      source_url: "https://github.com/yodeltalk/event_store",
+      source_url: "https://github.com/YodelTalk/event_store",
       docs: [
+        main: "EventStore",
         groups_for_modules: [
-          Stores: ~r/EventStore\.Adapter\./,
+          Adapters: ~r/EventStore\.Adapter\./,
           PubSub: ~r/EventStore\.PubSub\./
         ]
       ]

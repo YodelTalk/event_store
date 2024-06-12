@@ -2,6 +2,12 @@ defmodule EventStore.Adapter.InMemory do
   @moduledoc """
   An in-memory event store adapter.
 
+  This adapter can speed up your test suite by omitting database interactions.
+  To use it, configure ﻿`config/test.exs` as follows:
+
+      config :event_store,
+        adapter: EventStore.Adapter.InMemory
+
   > #### Avoid using this adapter in production! {: .error}
   >
   > This adapter is not optimized and is intended solely for testing and

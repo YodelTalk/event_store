@@ -14,12 +14,12 @@ defmodule EventStore.PubSub do
   alias EventStore.Event
 
   @doc """
-  Specifies that a process should subscribe to a specific event type.
+  Subscribes the calling process to a specific event type.
   """
-  @callback subscribe(atom()) :: :ok
+  @callback subscribe(name :: atom()) :: :ok
 
   @doc """
   Broadcasts an event to all subscribers of its type.
   """
-  @callback broadcast(Event.t()) :: [pid()]
+  @callback broadcast(event :: Event.t()) :: [pid()]
 end

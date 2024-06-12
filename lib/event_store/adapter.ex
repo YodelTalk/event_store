@@ -14,7 +14,7 @@ defmodule EventStore.Adapter do
   @callback stream() :: Enum.t()
 
   @doc """
-  Streams events filtered by a single or multiple aggregate IDs or event names.
+  Streams events filtered by one or more aggregate IDs or event names.
   """
   @callback stream(
               identifier ::
@@ -25,7 +25,16 @@ defmodule EventStore.Adapter do
             ) :: Enum.t()
 
   @doc """
-  Streams events filtered by a single or multiple aggregate IDs or event names,
+  Streams events filtered by one or more aggregate IDs and one or more
+  event names.
+  """
+  @callback stream(
+              aggregate_ids :: EventStore.aggregate_id() | [EventStore.aggregate_id()],
+              names :: EventStore.name() | [EventStore.name()]
+            ) :: Enum.t()
+
+  @doc """
+  Streams events filtered by one or more aggregate IDs or event names,
   since a given timestamp.
   """
   @callback stream_since(
@@ -34,6 +43,16 @@ defmodule EventStore.Adapter do
                 | [EventStore.aggregate_id()]
                 | EventStore.name()
                 | [EventStore.name()],
+              timestamp :: NaiveDateTime.t()
+            ) :: Enum.t()
+
+  @doc """
+  Streams events filtered by one or more aggregate IDs or event names,
+  since a given timestamp.
+  """
+  @callback stream_since(
+              aggregate_ids :: EventStore.aggregate_id() | [EventStore.aggregate_id()],
+              names :: EventStore.name() | [EventStore.name()],
               timestamp :: NaiveDateTime.t()
             ) :: Enum.t()
 

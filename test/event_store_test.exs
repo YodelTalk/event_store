@@ -261,6 +261,75 @@ defmodule EventStoreTest do
     end
   end
 
+  describe "stream/2" do
+    setup :dispatch_events
+
+    test "returns events for the given aggregate ID and event name", %{
+      aggregate_ids: aggregate_ids
+    } do
+      EventStore.transaction(fn ->
+        events = EventStore.stream(aggregate_ids.alice, UserCreated)
+
+        assert Enum.all?(events, &(&1.aggregate_id == aggregate_ids.alice))
+        refute Enum.any?(events, &(&1.aggregate_id == aggregate_ids.bob))
+        refute Enum.any?(events, &(&1.aggregate_id == aggregate_ids.charlie))
+        assert Enum.all?(events, &is_struct(&1, UserCreated))
+        refute Enum.any?(events, &is_struct(&1, UserUpdated))
+        refute Enum.any?(events, &is_struct(&1, UserDestroyed))
+        assert Enum.all?(events, &is_binary(&1.id))
+      end)
+    end
+
+    test "returns events for the given aggregate IDs and event name", %{
+      aggregate_ids: aggregate_ids
+    } do
+      EventStore.transaction(fn ->
+        events = EventStore.stream([aggregate_ids.alice, aggregate_ids.bob], UserCreated)
+
+        assert Enum.any?(events, &(&1.aggregate_id == aggregate_ids.alice))
+        assert Enum.any?(events, &(&1.aggregate_id == aggregate_ids.bob))
+        refute Enum.any?(events, &(&1.aggregate_id == aggregate_ids.charlie))
+        assert Enum.all?(events, &is_struct(&1, UserCreated))
+        refute Enum.any?(events, &is_struct(&1, UserUpdated))
+        refute Enum.any?(events, &is_struct(&1, UserDestroyed))
+        assert Enum.all?(events, &is_binary(&1.id))
+      end)
+    end
+
+    test "returns events for the given aggregate ID and event names", %{
+      aggregate_ids: aggregate_ids
+    } do
+      EventStore.transaction(fn ->
+        events = EventStore.stream(aggregate_ids.alice, [UserCreated, UserUpdated])
+
+        assert Enum.all?(events, &(&1.aggregate_id == aggregate_ids.alice))
+        refute Enum.any?(events, &(&1.aggregate_id == aggregate_ids.bob))
+        refute Enum.any?(events, &(&1.aggregate_id == aggregate_ids.charlie))
+        assert Enum.any?(events, &is_struct(&1, UserCreated))
+        assert Enum.any?(events, &is_struct(&1, UserUpdated))
+        refute Enum.any?(events, &is_struct(&1, UserDestroyed))
+        assert Enum.all?(events, &is_binary(&1.id))
+      end)
+    end
+
+    test "returns events for the given aggregate IDs and event names", %{
+      aggregate_ids: aggregate_ids
+    } do
+      EventStore.transaction(fn ->
+        events =
+          EventStore.stream([aggregate_ids.alice, aggregate_ids.bob], [UserCreated, UserUpdated])
+
+        assert Enum.any?(events, &(&1.aggregate_id == aggregate_ids.alice))
+        assert Enum.any?(events, &(&1.aggregate_id == aggregate_ids.bob))
+        refute Enum.any?(events, &(&1.aggregate_id == aggregate_ids.charlie))
+        assert Enum.any?(events, &is_struct(&1, UserCreated))
+        assert Enum.any?(events, &is_struct(&1, UserUpdated))
+        refute Enum.any?(events, &is_struct(&1, UserDestroyed))
+        assert Enum.all?(events, &is_binary(&1.id))
+      end)
+    end
+  end
+
   describe "stream_since/2" do
     setup [:record_started_at, :dispatch_events]
 
@@ -323,6 +392,96 @@ defmodule EventStoreTest do
       assert_raise FunctionClauseError, fn ->
         EventStore.stream_since("DefinitelyNotAnUUID", NaiveDateTime.utc_now())
       end
+    end
+  end
+
+  describe "stream_since/3" do
+    setup [:record_started_at, :dispatch_events]
+
+    test "returns events for the given aggregate ID and event name since the given timestamp", %{
+      aggregate_ids: aggregate_ids,
+      started_at: started_at
+    } do
+      EventStore.transaction(fn ->
+        events = EventStore.stream_since(aggregate_ids.alice, UserCreated, started_at)
+
+        assert Enum.all?(events, &(NaiveDateTime.compare(&1.inserted_at, started_at) == :gt))
+        assert Enum.all?(events, &(&1.aggregate_id == aggregate_ids.alice))
+        refute Enum.any?(events, &(&1.aggregate_id == aggregate_ids.bob))
+        refute Enum.any?(events, &(&1.aggregate_id == aggregate_ids.charlie))
+        assert Enum.all?(events, &is_struct(&1, UserCreated))
+        refute Enum.any?(events, &is_struct(&1, UserUpdated))
+        refute Enum.any?(events, &is_struct(&1, UserDestroyed))
+        assert Enum.all?(events, &is_binary(&1.id))
+      end)
+    end
+
+    test "returns events for the given aggregate IDs and event name since the given timestamp", %{
+      aggregate_ids: aggregate_ids,
+      started_at: started_at
+    } do
+      EventStore.transaction(fn ->
+        events =
+          EventStore.stream_since(
+            [aggregate_ids.alice, aggregate_ids.bob],
+            UserCreated,
+            started_at
+          )
+
+        assert Enum.all?(events, &(NaiveDateTime.compare(&1.inserted_at, started_at) == :gt))
+        # Alice was created a long time ago
+        refute Enum.any?(events, &(&1.aggregate_id == aggregate_ids.alice))
+        assert Enum.any?(events, &(&1.aggregate_id == aggregate_ids.bob))
+        refute Enum.any?(events, &(&1.aggregate_id == aggregate_ids.charlie))
+        assert Enum.all?(events, &is_struct(&1, UserCreated))
+        refute Enum.any?(events, &is_struct(&1, UserUpdated))
+        refute Enum.any?(events, &is_struct(&1, UserDestroyed))
+        assert Enum.all?(events, &is_binary(&1.id))
+      end)
+    end
+
+    test "returns events for the given aggregate ID and event names since the given timestamp", %{
+      aggregate_ids: aggregate_ids,
+      started_at: started_at
+    } do
+      EventStore.transaction(fn ->
+        events =
+          EventStore.stream_since(aggregate_ids.alice, [UserCreated, UserUpdated], started_at)
+
+        assert Enum.all?(events, &(NaiveDateTime.compare(&1.inserted_at, started_at) == :gt))
+        assert Enum.all?(events, &(&1.aggregate_id == aggregate_ids.alice))
+        refute Enum.any?(events, &(&1.aggregate_id == aggregate_ids.bob))
+        refute Enum.any?(events, &(&1.aggregate_id == aggregate_ids.charlie))
+        # Alice was created a long time ago
+        refute Enum.any?(events, &is_struct(&1, UserCreated))
+        assert Enum.any?(events, &is_struct(&1, UserUpdated))
+        refute Enum.any?(events, &is_struct(&1, UserDestroyed))
+        assert Enum.all?(events, &is_binary(&1.id))
+      end)
+    end
+
+    test "returns events for the given aggregate IDs and event names since the given timestamp",
+         %{
+           aggregate_ids: aggregate_ids,
+           started_at: started_at
+         } do
+      EventStore.transaction(fn ->
+        events =
+          EventStore.stream_since(
+            [aggregate_ids.alice, aggregate_ids.bob],
+            [UserCreated, UserUpdated],
+            started_at
+          )
+
+        assert Enum.all?(events, &(NaiveDateTime.compare(&1.inserted_at, started_at) == :gt))
+        assert Enum.any?(events, &(&1.aggregate_id == aggregate_ids.alice))
+        assert Enum.any?(events, &(&1.aggregate_id == aggregate_ids.bob))
+        refute Enum.any?(events, &(&1.aggregate_id == aggregate_ids.charlie))
+        assert Enum.any?(events, &is_struct(&1, UserCreated))
+        assert Enum.any?(events, &is_struct(&1, UserUpdated))
+        refute Enum.any?(events, &is_struct(&1, UserDestroyed))
+        assert Enum.all?(events, &is_binary(&1.id))
+      end)
     end
   end
 

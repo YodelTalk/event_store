@@ -88,34 +88,55 @@ defmodule EventStore.Adapter.Postgres do
   end
 
   @impl true
-  def stream(aggregate_id) when is_one_or_more_uuids(aggregate_id) do
+  def stream(aggregate_ids) when is_one_or_more_uuids(aggregate_ids) do
     Event
-    |> by_aggregate_id(aggregate_id)
+    |> by_aggregate_id(aggregate_ids)
     |> order_by(:inserted_at)
     |> Repo.stream()
   end
 
   @impl true
-  def stream(event) when is_one_or_more_atoms(event) do
+  def stream(names) when is_one_or_more_atoms(names) do
     Event
-    |> by_event_name(event)
+    |> by_event_name(names)
     |> order_by(:inserted_at)
     |> Repo.stream()
   end
 
   @impl true
-  def stream_since(aggregate_id, timestamp) when is_one_or_more_uuids(aggregate_id) do
+  def stream(aggregate_ids, names)
+      when is_one_or_more_uuids(aggregate_ids) and is_one_or_more_atoms(names) do
     Event
-    |> by_aggregate_id(aggregate_id)
+    |> by_aggregate_id(aggregate_ids)
+    |> by_event_name(names)
+    |> order_by(:inserted_at)
+    |> Repo.stream()
+  end
+
+  @impl true
+  def stream_since(aggregate_ids, timestamp) when is_one_or_more_uuids(aggregate_ids) do
+    Event
+    |> by_aggregate_id(aggregate_ids)
     |> inserted_after(timestamp)
     |> order_by(:inserted_at)
     |> Repo.stream()
   end
 
   @impl true
-  def stream_since(event, timestamp) when is_one_or_more_atoms(event) do
+  def stream_since(names, timestamp) when is_one_or_more_atoms(names) do
     Event
-    |> by_event_name(event)
+    |> by_event_name(names)
+    |> inserted_after(timestamp)
+    |> order_by(:inserted_at)
+    |> Repo.stream()
+  end
+
+  @impl true
+  def stream_since(aggregate_ids, names, timestamp)
+      when is_one_or_more_uuids(aggregate_ids) and is_one_or_more_atoms(names) do
+    Event
+    |> by_aggregate_id(aggregate_ids)
+    |> by_event_name(names)
     |> inserted_after(timestamp)
     |> order_by(:inserted_at)
     |> Repo.stream()

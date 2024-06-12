@@ -6,7 +6,9 @@ config :producer,
 config :event_store,
   adapter: EventStore.Adapter.Postgres,
   pub_sub: EventStore.PubSub.Multi,
-  namespace: Consumer,
+  namespace: Consumer
+
+config :event_store, EventStore.PubSub.Multi,
   broadcast_to: [EventStore.PubSub.Postgres, EventStore.PubSub.Registry]
 
 config :event_store, EventStore.Adapter.Postgres.Repo,

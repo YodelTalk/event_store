@@ -4,5 +4,5 @@ iex -S mix
 ```
 
 ```elixir
-Producet.dispatch()
+Producer.dispatch()
 ```

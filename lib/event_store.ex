@@ -45,11 +45,28 @@ defmodule EventStore do
   import EventStore.Guards
   alias EventStore.AcknowledgementError
 
-  @type aggregate_id :: String.t()
-  @type name :: atom()
-
   @namespace Application.compile_env(:event_store, :namespace, __MODULE__)
   @sync_timeout Application.compile_env(:event_store, :sync_timeout, 5000)
+
+  @typedoc """
+  The unique identifier for an aggregate as an UUID `t:String.t/0`.
+  """
+  @type aggregate_id :: String.t()
+
+  @typedoc """
+  One or more `t:EventStore.aggregate_id/0`s.
+  """
+  @type aggregate_ids :: aggregate_id() | [aggregate_ids()]
+
+  @typedoc """
+  The name used to identify an event as `t:module/0`.
+  """
+  @type name :: module()
+
+  @typedoc """
+  One or more `t:EventStore.name/0`s.
+  """
+  @type names :: name | [name()]
 
   @doc """
   Returns the configured namespace for the events.
@@ -158,15 +175,12 @@ defmodule EventStore do
   @doc """
   Subscribes the calling process to one or more events.
   """
-  @spec subscribe(name() | list(name())) :: any()
-  def subscribe(event) when is_atom(event), do: subscribe([event])
+  @spec subscribe(names()) :: any()
+  def subscribe(names) when is_atom(names), do: subscribe([names])
 
-  def subscribe(events) when is_list(events) do
-    for event <- events, do: @pub_sub.subscribe(event)
+  def subscribe(names) when is_list(names) do
+    for name <- names, do: @pub_sub.subscribe(name)
   end
-
-  defguardp is_identifier(identifier)
-            when is_uuid(identifier) or is_atom(identifier) or is_list(identifier)
 
   @doc """
   Provides a stream of all existing events.
@@ -177,37 +191,53 @@ defmodule EventStore do
   end
 
   @doc """
-  Streams events filtered by a single or multiple aggregate IDs or event names.
+  Streams events filtered by one or more aggregate IDs or event names.
   """
-  @spec stream(aggregate_id() | [aggregate_id()] | name() | [name()]) :: Enum.t()
-  def stream(identifier) when is_identifier(identifier) do
-    handle_stream(@adapter.stream(identifier))
+  @spec stream(aggregate_ids() | names()) :: Enum.t()
+  def stream(aggregate_ids_or_names)
+      when is_one_or_more_uuids(aggregate_ids_or_names) or
+             is_one_or_more_atoms(aggregate_ids_or_names) do
+    handle_stream(@adapter.stream(aggregate_ids_or_names))
   end
 
   @doc """
-  Streams events filtered by a single or multiple aggregate IDs or event names,
-  since a given timestamp.
+  Streams events filtered by one or more aggregate IDs and one or more event
+  names.
   """
-  @spec stream(
-          aggregate_id() | [aggregate_id()] | name() | [name()],
-          NaiveDateTime.t()
-        ) :: Enum.t()
-  @deprecated "Please use stream_since/2 instead"
-  def stream(identifier, %NaiveDateTime{} = timestamp) when is_identifier(identifier) do
-    stream_since(identifier, timestamp)
+  @spec stream(aggregate_ids(), names()) :: Enum.t()
+  def stream(aggregate_ids, names)
+      when is_one_or_more_uuids(aggregate_ids) or is_one_or_more_atoms(names) do
+    handle_stream(@adapter.stream(aggregate_ids, names))
+  end
+
+  def stream(aggregate_ids_or_names, %NaiveDateTime{} = timestamp)
+      when is_one_or_more_uuids(aggregate_ids_or_names) or
+             is_one_or_more_atoms(aggregate_ids_or_names) do
+    IO.warn("calling stream/2 with a timestamp is deprecated, please use stream_since/2 instead")
+    stream_since(aggregate_ids_or_names, timestamp)
   end
 
   @doc """
-  Streams events filtered by a single or multiple aggregate IDs or event names,
+  Streams events filtered by one or more aggregate IDs or event names,,
   since a given timestamp.
   """
   @doc since: "0.2.0"
-  @spec stream_since(
-          aggregate_id() | [aggregate_id()] | name() | [name()],
-          NaiveDateTime.t()
-        ) :: Enum.t()
-  def stream_since(identifier, %NaiveDateTime{} = timestamp) when is_identifier(identifier) do
-    handle_stream(@adapter.stream_since(identifier, timestamp))
+  @spec stream_since(aggregate_ids() | names(), NaiveDateTime.t()) :: Enum.t()
+  def stream_since(aggregate_ids_or_names, %NaiveDateTime{} = timestamp)
+      when is_one_or_more_uuids(aggregate_ids_or_names) or
+             is_one_or_more_atoms(aggregate_ids_or_names) do
+    handle_stream(@adapter.stream_since(aggregate_ids_or_names, timestamp))
+  end
+
+  @doc """
+  Streams events filtered by one or more aggregate IDs and one or more event
+  names, since a given timestamp.
+  """
+  @doc since: "0.2.0"
+  @spec stream_since(aggregate_ids(), names(), NaiveDateTime.t()) :: Enum.t()
+  def stream_since(aggregate_ids, names, %NaiveDateTime{} = timestamp)
+      when is_one_or_more_uuids(aggregate_ids) or is_one_or_more_atoms(names) do
+    handle_stream(@adapter.stream_since(aggregate_ids, names, timestamp))
   end
 
   defp handle_stream(stream) do

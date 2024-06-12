@@ -60,9 +60,11 @@ defmodule EventStore.Adapter.InMemory do
     |> Stream.map(& &1)
   end
 
+  # stream/1
+
   @impl true
   def stream(aggregate_id) when is_uuid(aggregate_id) do
-    filter(&(&1.aggregate_id == aggregate_id))
+    stream([aggregate_id])
   end
 
   @impl true
@@ -71,27 +73,50 @@ defmodule EventStore.Adapter.InMemory do
   end
 
   @impl true
-  def stream(event) when is_atom(event) do
-    name = EventStore.to_name(event)
-    filter(&(&1.name == name))
+  def stream(name) when is_atom(name) do
+    stream([name])
   end
 
   @impl true
-  def stream(events) when is_atoms(events) do
-    names = Enum.map(events, &EventStore.to_name/1)
+  def stream(names) when is_atoms(names) do
+    names = Enum.map(names, &EventStore.to_name/1)
     filter(&(&1.name in names))
   end
 
+  # stream/2
+
   @impl true
-  def stream_since(aggregate_id, timestamp) when is_uuid(aggregate_id) do
-    filter(
-      &(&1.aggregate_id == aggregate_id &&
-          NaiveDateTime.compare(&1.inserted_at, timestamp) in [:gt, :eq])
-    )
+  def stream(aggregate_id, name) when is_uuid(aggregate_id) and is_atom(name) do
+    stream([aggregate_id], [name])
   end
 
   @impl true
-  def stream_since(aggregate_ids, timestamp) when is_uuids(aggregate_ids) do
+  def stream(aggregate_ids, name) when is_uuids(aggregate_ids) and is_atom(name) do
+    stream(aggregate_ids, [name])
+  end
+
+  @impl true
+  def stream(aggregate_id, names) when is_uuid(aggregate_id) and is_atoms(names) do
+    stream([aggregate_id], names)
+  end
+
+  @impl true
+  def stream(aggregate_ids, names) when is_uuids(aggregate_ids) and is_atoms(names) do
+    names = Enum.map(names, &EventStore.to_name/1)
+    filter(&(&1.aggregate_id in aggregate_ids && &1.name in names))
+  end
+
+  # stream_since/2
+
+  @impl true
+  def stream_since(aggregate_id, timestamp)
+      when is_uuid(aggregate_id) and is_struct(timestamp, NaiveDateTime) do
+    stream_since([aggregate_id], timestamp)
+  end
+
+  @impl true
+  def stream_since(aggregate_ids, timestamp)
+      when is_uuids(aggregate_ids) and is_struct(timestamp, NaiveDateTime) do
     filter(
       &(&1.aggregate_id in aggregate_ids &&
           NaiveDateTime.compare(&1.inserted_at, timestamp) in [:gt, :eq])
@@ -99,15 +124,47 @@ defmodule EventStore.Adapter.InMemory do
   end
 
   @impl true
-  def stream_since(event, timestamp) when is_atom(event) do
-    name = EventStore.to_name(event)
-    filter(&(&1.name == name && NaiveDateTime.compare(&1.inserted_at, timestamp) in [:gt, :eq]))
+  def stream_since(name, timestamp)
+      when is_atom(name) and is_struct(timestamp, NaiveDateTime) do
+    stream_since([name], timestamp)
   end
 
   @impl true
-  def stream_since(events, timestamp) when is_atoms(events) do
-    names = Enum.map(events, &EventStore.to_name/1)
+  def stream_since(names, timestamp)
+      when is_atoms(names) and is_struct(timestamp, NaiveDateTime) do
+    names = Enum.map(names, &EventStore.to_name/1)
     filter(&(&1.name in names && NaiveDateTime.compare(&1.inserted_at, timestamp) in [:gt, :eq]))
+  end
+
+  # stream_since/3
+
+  @impl true
+  def stream_since(aggregate_id, name, timestamp) when is_uuid(aggregate_id) and is_atom(name) do
+    stream_since([aggregate_id], [name], timestamp)
+  end
+
+  @impl true
+  def stream_since(aggregate_ids, name, timestamp)
+      when is_uuids(aggregate_ids) and is_atom(name) do
+    stream_since(aggregate_ids, [name], timestamp)
+  end
+
+  @impl true
+  def stream_since(aggregate_id, names, timestamp)
+      when is_uuid(aggregate_id) and is_atoms(names) do
+    stream_since([aggregate_id], names, timestamp)
+  end
+
+  @impl true
+  def stream_since(aggregate_ids, names, timestamp)
+      when is_uuids(aggregate_ids) and is_atoms(names) do
+    names = Enum.map(names, &EventStore.to_name/1)
+
+    filter(
+      &(&1.aggregate_id in aggregate_ids &&
+          &1.name in names &&
+          NaiveDateTime.compare(&1.inserted_at, timestamp) in [:gt, :eq])
+    )
   end
 
   @impl true

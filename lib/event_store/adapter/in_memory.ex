@@ -26,7 +26,7 @@ defmodule EventStore.Adapter.InMemory do
     # TODO: Improve the performance of the next_aggregate_version.
     next_aggregate_version =
       changeset.changes.aggregate_id
-      |> stream(NaiveDateTime.new!(2000, 1, 1, 0, 0, 0))
+      |> stream_since(NaiveDateTime.new!(2000, 1, 1, 0, 0, 0))
       |> Enum.count()
       |> then(&(&1 + 1))
 
@@ -77,7 +77,7 @@ defmodule EventStore.Adapter.InMemory do
   end
 
   @impl true
-  def stream(aggregate_id, timestamp) when is_uuid(aggregate_id) do
+  def stream_since(aggregate_id, timestamp) when is_uuid(aggregate_id) do
     filter(
       &(&1.aggregate_id == aggregate_id &&
           NaiveDateTime.compare(&1.inserted_at, timestamp) in [:gt, :eq])
@@ -85,7 +85,7 @@ defmodule EventStore.Adapter.InMemory do
   end
 
   @impl true
-  def stream(aggregate_ids, timestamp) when is_uuids(aggregate_ids) do
+  def stream_since(aggregate_ids, timestamp) when is_uuids(aggregate_ids) do
     filter(
       &(&1.aggregate_id in aggregate_ids &&
           NaiveDateTime.compare(&1.inserted_at, timestamp) in [:gt, :eq])
@@ -93,13 +93,13 @@ defmodule EventStore.Adapter.InMemory do
   end
 
   @impl true
-  def stream(event, timestamp) when is_atom(event) do
+  def stream_since(event, timestamp) when is_atom(event) do
     name = EventStore.to_name(event)
     filter(&(&1.name == name && NaiveDateTime.compare(&1.inserted_at, timestamp) in [:gt, :eq]))
   end
 
   @impl true
-  def stream(events, timestamp) when is_atoms(events) do
+  def stream_since(events, timestamp) when is_atoms(events) do
     names = Enum.map(events, &EventStore.to_name/1)
     filter(&(&1.name in names && NaiveDateTime.compare(&1.inserted_at, timestamp) in [:gt, :eq]))
   end

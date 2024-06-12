@@ -108,7 +108,7 @@ defmodule EventStore.Adapter.Postgres do
   end
 
   @impl true
-  def stream(aggregate_id, timestamp) when is_one_or_more_uuids(aggregate_id) do
+  def stream_since(aggregate_id, timestamp) when is_one_or_more_uuids(aggregate_id) do
     Event
     |> by_aggregate_id(aggregate_id)
     |> inserted_after(timestamp)
@@ -117,7 +117,7 @@ defmodule EventStore.Adapter.Postgres do
   end
 
   @impl true
-  def stream(event, timestamp) when is_one_or_more_atoms(event) do
+  def stream_since(event, timestamp) when is_one_or_more_atoms(event) do
     Event
     |> by_event_name(event)
     |> inserted_after(timestamp)

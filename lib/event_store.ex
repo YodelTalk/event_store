@@ -192,8 +192,22 @@ defmodule EventStore do
           aggregate_id() | [aggregate_id()] | name() | [name()],
           NaiveDateTime.t()
         ) :: Enum.t()
+  @deprecated "Please use stream_since/2 instead"
   def stream(identifier, %NaiveDateTime{} = timestamp) when is_identifier(identifier) do
-    handle_stream(@adapter.stream(identifier, timestamp))
+    stream_since(identifier, timestamp)
+  end
+
+  @doc """
+  Streams events filtered by a single or multiple aggregate IDs or event names,
+  since a given timestamp.
+  """
+  @doc since: "0.2.0"
+  @spec stream_since(
+          aggregate_id() | [aggregate_id()] | name() | [name()],
+          NaiveDateTime.t()
+        ) :: Enum.t()
+  def stream_since(identifier, %NaiveDateTime{} = timestamp) when is_identifier(identifier) do
+    handle_stream(@adapter.stream_since(identifier, timestamp))
   end
 
   defp handle_stream(stream) do

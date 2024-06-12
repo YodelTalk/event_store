@@ -27,7 +27,7 @@ defmodule EventStore.Adapter do
   Streams events filtered by a single or multiple aggregate IDs or event names,
   since a given timestamp.
   """
-  @callback stream(
+  @callback stream_since(
               EventStore.aggregate_id()
               | [EventStore.aggregate_id()]
               | EventStore.name()

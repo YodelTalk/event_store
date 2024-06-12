@@ -261,7 +261,7 @@ defmodule EventStoreTest do
     end
   end
 
-  describe "stream/2" do
+  describe "stream_since/2" do
     setup [:record_started_at, :dispatch_events]
 
     test "return events for the given aggregate ID since the given timestamp",
@@ -270,7 +270,7 @@ defmodule EventStoreTest do
            started_at: started_at
          } do
       EventStore.transaction(fn ->
-        events = EventStore.stream(aggregate_ids.alice, started_at)
+        events = EventStore.stream_since(aggregate_ids.alice, started_at)
 
         assert Enum.all?(events, &(&1.aggregate_id == aggregate_ids.alice))
         assert Enum.all?(events, &(NaiveDateTime.compare(&1.inserted_at, started_at) == :gt))
@@ -283,7 +283,7 @@ defmodule EventStoreTest do
       started_at: started_at
     } do
       EventStore.transaction(fn ->
-        events = EventStore.stream([aggregate_ids.alice, aggregate_ids.bob], started_at)
+        events = EventStore.stream_since([aggregate_ids.alice, aggregate_ids.bob], started_at)
 
         assert Enum.any?(events, &(&1.aggregate_id == aggregate_ids.alice))
         assert Enum.any?(events, &(&1.aggregate_id == aggregate_ids.bob))
@@ -297,7 +297,7 @@ defmodule EventStoreTest do
       started_at: started_at
     } do
       EventStore.transaction(fn ->
-        events = EventStore.stream(UserCreated, started_at)
+        events = EventStore.stream_since(UserCreated, started_at)
 
         assert Enum.all?(events, &is_struct(&1, UserCreated))
         assert Enum.all?(events, &(NaiveDateTime.compare(&1.inserted_at, started_at) == :gt))
@@ -309,7 +309,7 @@ defmodule EventStoreTest do
       started_at: started_at
     } do
       EventStore.transaction(fn ->
-        events = EventStore.stream([UserCreated, UserUpdated], started_at)
+        events = EventStore.stream_since([UserCreated, UserUpdated], started_at)
 
         assert Enum.any?(events, &is_struct(&1, UserCreated))
         assert Enum.any?(events, &is_struct(&1, UserUpdated))
@@ -321,7 +321,7 @@ defmodule EventStoreTest do
 
     test "raises an error when an invalid aggregate ID is given" do
       assert_raise FunctionClauseError, fn ->
-        EventStore.stream("DefinitelyNotAnUUID", NaiveDateTime.utc_now())
+        EventStore.stream_since("DefinitelyNotAnUUID", NaiveDateTime.utc_now())
       end
     end
   end

@@ -60,7 +60,13 @@ defmodule EventStore.Event do
 
       @spec cast_payload(Ecto.Schema.t(), EventStore.Event.payload()) :: Ecto.Changeset.t()
       def cast_payload(data, payload) do
-        cast(data, %{payload: Jason.decode!(payload)}, [:payload])
+        payload_decoded =
+          case payload do
+            nil -> nil
+            payload -> Jason.decode!(payload)
+          end
+
+        cast(data, %{payload: payload_decoded}, [:payload])
       end
     end
   end

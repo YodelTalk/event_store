@@ -67,8 +67,8 @@ defmodule EventStore.Adapter.Postgres do
     where(query, aggregate_id: ^aggregate_id)
   end
 
-  defp by_event_name(query, events) when is_list(events) do
-    names = Enum.map(events, &EventStore.to_name/1)
+  defp by_event_name(query, names) when is_list(names) do
+    names = Enum.map(names, &EventStore.to_name/1)
     where(query, [e], e.name in ^names)
   end
 

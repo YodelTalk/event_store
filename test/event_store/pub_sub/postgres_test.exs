@@ -154,8 +154,8 @@ defmodule EventStore.PubSub.PostgresTest do
     notifications_pid = Process.whereis(EventStore.PubSub.Postgres.Notifications)
     Process.exit(notifications_pid, :kill)
 
-    # Wait for the process to restart
-    Process.sleep(100)
+    # Wait for the process to restart and re-subscribe
+    Process.sleep(200)
 
     # The Notifications process should be back up
     assert Process.whereis(EventStore.PubSub.Postgres.Notifications) != nil

@@ -83,26 +83,29 @@ defmodule EventStore.PubSub.Postgres do
     {:noreply, names}
   end
 
+  @impl true
   def handle_info({:DOWN, _ref, :process, _pid, reason}, names) do
     Logger.warning(
       "Postgrex.Notifications process went down (reason: #{inspect(reason)}), " <>
         "re-subscribing to channel #{@channel}"
     )
 
-    wait_for_notifications_and_resubscribe()
+    Process.send_after(self(), :try_resubscribe, 100)
     {:noreply, names}
   end
 
-  defp wait_for_notifications_and_resubscribe do
+  @impl true
+  def handle_info(:try_resubscribe, names) do
     case Process.whereis(__MODULE__.Notifications) do
       nil ->
-        Process.sleep(10)
-        wait_for_notifications_and_resubscribe()
+        Process.send_after(self(), :try_resubscribe, 100)
+        {:noreply, names}
 
-      _pid ->
-        {:ok, _ref} = Notifications.listen(__MODULE__.Notifications, @channel)
+      pid ->
+        {:ok, _ref} = Notifications.listen(pid, @channel)
         monitor_notifications()
         Logger.info("Re-subscribed to PostgreSQL channel #{@channel} after process restart")
+        {:noreply, names}
     end
   end
 end
